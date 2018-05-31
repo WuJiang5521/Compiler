@@ -50,7 +50,7 @@ class Situation;
 // define
 class Base {
 public:
-    int nodeType;
+    int node_type;
 };
 
 class Stm: public Base {};
@@ -68,11 +68,11 @@ public:
 
 class Define: public Base {
 public:
-    std::vector<LabelDef> labelDef; // can be empty
-    std::vector<ConstDef> constDef; // can be empty
-    std::vector<TypeDef> typeDef; // can be empty
-    std::vector<VarDef> varDef; // can be empty
-    std::vector<FunctionDef> functionDef; // can be empty
+    std::vector<LabelDef> label_def; // can be empty
+    std::vector<ConstDef> const_def; // can be empty
+    std::vector<TypeDef> type_def; // can be empty
+    std::vector<VarDef> var_def; // can be empty
+    std::vector<FunctionDef> function_def; // can be empty
 };
 
 class Body: public Base {
@@ -88,13 +88,7 @@ public:
 class ConstDef: public Base {
 public:
     std::string name;
-    Type type;
-    union {
-        bool boolean_value;
-        char char_value;
-        int integer_value;
-        float real_value;
-    };
+    Value value;
 };
 
 class TypeDef: public Base {
@@ -107,22 +101,22 @@ class VarDef: public Base {
 public:
     std::string name;
     Type type;
-    Value initializingValue;
+    Value initializing_value;
 };
 
 class FunctionDef: public Base {
 public:
     std::string name;
-    std::vector<int> argsType;
-    int rtnType;
+    std::vector<int> args_type;
+    int rtn_type;
 
     Define *Define = nullptr; // can be nullptr
     Body *body = nullptr; // cannot be nullptr
 };
 
 class AssignStm: public Stm {
-    std::string leftValue;
-    Exp rightValue;
+    std::string left_value;
+    Exp right_value;
 };
 
 class WithStm: public Stm {
@@ -140,8 +134,8 @@ class LabelStm: public Stm {
 
 class IfStm: public Stm {
     Exp condition;
-    Body *trueDo = nullptr; // cannot be nullptr
-    Body *falseDo = nullptr; // can be nullptr
+    Body *true_do = nullptr; // cannot be nullptr
+    Body *false_do = nullptr; // can be nullptr
 };
 
 class CaseStm: public Stm {
@@ -171,13 +165,13 @@ class GotoStm: public Stm {
 
 class MonocularExp: public Exp {
 public:
-    int opCode;
+    int op_code;
     Exp operand;
 };
 
 class BinaryExp: public Exp {
 public:
-    int opCode;
+    int op_code;
     Exp operand1, operand2;
 };
 
@@ -203,9 +197,10 @@ public:
 };
 
 class Situation: public Base {
-    std::vector<Exp> matchList;
+    std::vector<Exp> match_list;
     Body solution;
 };
 
+void printTree(Base root);
 
 #endif //SPLCOMPILER_TREE_H

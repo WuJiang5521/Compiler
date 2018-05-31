@@ -7,3 +7,7 @@
 Program::Program() {
     typeList.append();
 }
+
+void printTree(Base root) {
+
+}
