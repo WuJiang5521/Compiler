@@ -11,12 +11,12 @@
 
 class Value {
     int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record
-    Address address;
+    ADDRESS address;
     union {
-        Integer integer_value;
-        Real real_value;
-        Char char_value;
-        Boolean boolean_value;
+        INTEGER integer_value;
+        REAL real_value;
+        CHAR char_value;
+        BOOLEAN boolean_value;
         std::vector<Value> children_value; // a list of the value of children
     };
 };

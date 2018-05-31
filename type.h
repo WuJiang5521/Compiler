@@ -9,13 +9,13 @@
 #include <vector>
 #include "common.h"
 
-#define tInt 0
-#define tReal 1
-#define tChar 2
-#define tBoolean 3
-#define tSet 4
-#define tArray 5
-#define tRecord 6
+#define T_INTEGER 0
+#define T_REAL 1
+#define T_CHAR 2
+#define T_BOOLEAN 3
+#define T_SET 4
+#define T_ARRAY 5
+#define T_RECORD 6
 
 class Type {
     std::string name; // use what name to find this value, may be empty

@@ -193,7 +193,7 @@ public:
 
 class MemoryExp: public Exp {
 public:
-    Address address;
+    ADDRESS address;
 };
 
 class Situation: public Base {
