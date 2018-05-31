@@ -20,6 +20,7 @@
 class Type {
     std::string name; // use what name to find this value, may be empty
     int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record 7~n: other type defined by user
+                   // string is considered as an array of char
     int children_num; // the number of children
     std::vector<Type> child_type; // a list of the type of children
 };
