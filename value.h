@@ -12,7 +12,7 @@
 class Value {
     int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record
     ADDRESS address;
-    union {
+    union return_value {
         INTEGER integer_value;
         REAL real_value;
         CHAR char_value;

@@ -171,7 +171,7 @@ GotoStm::GotoStm(int label) : Stm(label) {
     this->label = label;
 }
 
-MonocularExp::MonocularExp(int op_code, Exp *oprand) {
+UnaryExp::UnaryExp(int op_code, Exp *oprand) {
     this->op_code = op_code;
     this->operand = oprand;
 }

@@ -3,13 +3,13 @@
 #define TOKEN(tok)  printf(#tok "\n");
 #define SYMBOL(sym) printf(#sym ": %s\n", yytext);
 #else
-//int installId(char*, unsigned);
-//int lookup(char*);
-//SYMTABNODEPTR newSymTabNode();
-//extern SYMTABNODEPTR symTab[SYMTABSIZE];
-//extern int currentSymTabSize;
-//#define TOKEN(tok)  return(T_##x);
-//#define SYMBOL(sym) yylval.iVal = installId(yytext, T_##x); TOKEN(x);
+#include <string.h>
+#include "spl.tab.h"
+int installId(char*, unsigned);
+int lookup(char*);
+extern sym_tab_node symtab[];
+extern int currentSymTabSize = 0;
+#define TOKEN(tok)  return(tok);
 #endif
 %}
 
@@ -97,13 +97,33 @@ ws              {delimiter}+
 "integer"   TOKEN(T_INTEGER)
 "real"      TOKEN(T_REAL)
 
-{id}                SYMBOL(S_ID)
-{char_const}        SYMBOL(S_CHAR)
-{string_const}      SYMBOL(S_STRING)
-{integer}           SYMBOL(S_INTEGER)
-{real}              SYMBOL(S_REAL)
+{id}                { yylval.iVal = installId(yytext); return S_ID; }
+{char_const}        { yylval.cVal = yytext; return S_CHAR; }
+{string_const}      { yylval.sVal = yytext; return S_STRING; }
+{integer}           { yylval.iVal = atoi(yytext); return S_INTEGER; }
+{real}              { yylval.fVal = atof(yytext); return S_REAL; }
 {ws}            // do nothing
 .               printf("ERROR. Unexpected symbol found. %s %d\n", yytext, yytext[0]);
 
 %%
 
+int installId(char* id, unsigned type = 0) {
+    int result = lookup(id);
+    // new symbol
+    if (result == -1) {
+        strcpy(symtab[currentSymTabSize].id, id);
+        return currentSymTabSize++;
+    }
+    // old symbol
+    else {
+        return result;
+    }
+}
+int lookup(char* id) {
+    for (int i = 0; i < currentSymTabSize; i++) {
+        if (strcmp(id, symtab[i].id) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}

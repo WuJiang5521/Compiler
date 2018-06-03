@@ -65,7 +65,7 @@ class RepeatStm;
 class WhileStm;
 class WithStm;
 // exp
-class MonocularExp;
+class UnaryExp;
 class BinaryExp;
 class CallExp;
 class ConstantExp;
@@ -87,7 +87,7 @@ public:
 
 class Exp: public Base {
 public:
-    Value return_value;
+    Value* return_value;
 
     explicit Exp(int type = 0);
 };
@@ -268,12 +268,12 @@ public:
     explicit GotoStm(int label);
 };
 
-class MonocularExp: public Exp {
+class UnaryExp: public Exp {
 public:
     int op_code;
     Exp *operand;
 
-    MonocularExp(int, Exp*);
+    UnaryExp(int, Exp*);
 };
 
 class BinaryExp: public Exp {
