@@ -9,7 +9,7 @@
 #define REAL float
 #define CHAR char
 #define BOOLEAN bool
-#define ADDRESS long
+#define ADDRESS unsigned long
 
 // 双目：依次为 加 减 乘 除 整除 取余 与 或 非
 #define OP_ADD 0
@@ -29,5 +29,42 @@
 #define OP_ODD 24
 #define OP_CHR 25
 #define OP_ORD 26
+
+std::string getOpNameByID(int id) {
+    switch (id) {
+        case OP_ADD:
+            return "+";
+        case OP_MINUS:
+            return "-";
+        case OP_MULTI:
+            return "*";
+        case OP_RDIV:
+            return "/";
+        case OP_DDIV:
+            return "//";
+        case OP_MOD:
+            return "%";
+        case OP_AND:
+            return "&&";
+        case OP_OR:
+            return "||";
+        case OP_NOT:
+            return "!";
+        case OP_OPPO:
+            return "-";
+        case OP_ABS:
+            return "abs";
+        case OP_PRED:
+            return "pred";
+        case OP_SUCC:
+            return "succ";
+        case OP_ODD:
+            return "odd";
+        case OP_CHR:
+            return "chr";
+        case OP_ORD:
+            return "ord";
+    }
+}
 
 #endif //SPLCOMPILER_COMMON_H

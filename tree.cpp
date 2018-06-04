@@ -3,7 +3,7 @@
 //
 
 #include "tree.h"
-#include <utility>
+#include <fstream>
 
 Base::Base(int type) {
     this->node_type = type;
@@ -14,7 +14,7 @@ Stm::Stm(int type) : Base(type) {}
 Exp::Exp(int type) : Base(type) {}
 
 Program::Program(const std::string &name): Base(N_PROGRAM) {
-    this->head_name = name;
+    this->name = name;
 }
 
 void Program::addDefine(Define *define) {
@@ -151,7 +151,8 @@ void CaseStm::addSituation(Situation *situation) {
     situations.push_back(situation);
 }
 
-ForStm::ForStm(Exp* start, Exp* end, int step): Stm(N_FOR_STM) {
+ForStm::ForStm(const std::string &iter, Exp* start, Exp* end, int step): Stm(N_FOR_STM) {
+	this->iter = iter;
     this->start = start;
     this->end = end;
     this->step = step;
@@ -171,18 +172,18 @@ GotoStm::GotoStm(int label) : Stm(label) {
     this->label = label;
 }
 
-MonocularExp::MonocularExp(int op_code, Exp *oprand) {
+MonocularExp::MonocularExp(int op_code, Exp *oprand): Exp(N_MONOCULAR_EXP) {
     this->op_code = op_code;
     this->operand = oprand;
 }
 
-BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2) {
+BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2): Exp(N_BINARY_EXP) {
     this->op_code = op_code;
     this->operand1 = operand1;
     this->operand2 = operand2;
 }
 
-CallExp::CallExp(const std::string &name) {
+CallExp::CallExp(const std::string &name): Exp(N_CALL_STM) {
     this->name = name;
     args.clear();
 }
@@ -191,123 +192,430 @@ void CallExp::addArgs(Exp *exp) {
     args.push_back(exp);
 }
 
-ConstantExp::ConstantExp(Value *val) {
+ConstantExp::ConstantExp(Value *val): Exp(N_CONSTANT_EXP) {
     value = val;
 }
 
-VariableExp::VariableExp(const std::string &name) {
+VariableExp::VariableExp(const std::string &name): Exp(N_VARIABLE_EXP) {
     this->name = name;
 }
 
-MemoryExp::MemoryExp(ADDRESS addr) {
+MemoryExp::MemoryExp(ADDRESS addr): Exp(N_MEMORY_EXP) {
     address = addr;
 }
 
-void printTree(Base root, int offset = 0) {
-    for (int i = 0; i < offset; i++) printf("  ");
-    switch (root.node_type) {
-        case N_PROGRAM: {
+Type::Type(): Base(N_TYPE) {
+    address = addr;
+}
 
-        }
-            break;
-        case N_DEFINE: {
+std::string getString(Value *value) {
+	std::string str;
+	if (value == nullptr) str = "NULL";
+	else
+		switch (value->base_type) {
+			case T_INTEGER: {
+				char val[10];
+				sprintf(val, "%d", value->integer_value);
+				str.append(val);
+			}
+				break;
+			case T_REAL: {
+				char val[10];
+				sprintf(val, "%.2f", value->real_value);
+				str.append(val);
+			}
+				break;
+			case T_CHAR: {
+				str.append("\'");
+				str.append(value->char_value);
+				str.append("\'");
+			}
+				break;
+			case T_BOOLEAN: {
+				if(value->boolean_value) str.append("true");
+				else str.append("false");
+			}
+				break;
+			case T_SET: case T_ARRAY: case T_RECORD: {
+				str.append("[");
+				for (auto child: value->children_value) {
+					str.append(getString(child));
+					str.append(",");
+				}
+				str.append("]");
+			}
+			default: {
+                str.append("\"There is something wrong. The type is unrecognised.\"");
+            }
+		}
+	return str;
+}
 
+std::string getString(Base *ori_node) {
+    std::string str;
+    if (ori_node == nullptr) str = "NULL";
+    else
+        switch (ori_node->node_type) {
+            case N_PROGRAM: {
+                auto *node = (Program*)ori_node;
+                str.append("{");
+                str.append("name:\"");
+                str.append(node->name);
+                str.append("\",");
+                str.append("define:");
+                str.append(getString(node->define));
+                str.append(",");
+                str.append("body:");
+                str.append(getString(node->body));
+                str.append(",}");
+            }
+                break;
+            case N_DEFINE: {
+                auto *node = (Define*)ori_node;
+                str.append("{");
+                str.append("label: [");
+                for (auto stm: node->label_def) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("],");
+                str.append("const: [");
+                for (auto stm: node->const_def) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("],");
+                str.append("type: [");
+                for (auto stm: node->type_def) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("],");
+                str.append("var: [");
+                for (auto stm: node->var_def) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("],");
+                str.append("function: [");
+                for (auto stm: node->function_def) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("],");
+                str.append("}");
+            }
+                break;
+            case N_BODY: {
+                auto *node = (Body*)ori_node;
+                str.append("[");
+                for (auto stm: node->stms) {
+                    str.append(getString(stm));
+                    str.append(",");
+                }
+                str.append("]");
+            }
+                break;
+            case N_SITUATION: {
+				auto *node = (Situation*)ori_node;
+                str.append("{match_list:[");
+                for (auto match_item: node->match_list) {
+                    str.append(getString(match_item));
+                    str.append(",");
+                }
+                str.append("], to_do:");
+                str.append(getString(node->solution));
+                str.append("}");
+            }
+                break;
+            case N_LABEL_DEF: {
+				auto *node = (LabelDef*)ori_node;
+                str.append("{label_def: ");
+                char id[100];
+                sprintf(id, "%d", node->label_index);
+                str.append(id);
+                str.append("}");
+            }
+                break;
+            case N_CONST_DEF: {
+            	auto *node = (ConstDef*)ori_node;
+                str.append("{const_name: \"");
+                str.append(node->name);
+                str.append("\", const_value: ");
+                str.append(getString(node->value));
+                str.append("}");
+            }
+                break;
+            case N_TYPE_DEF: {
+				auto *node = (TypeDef*)ori_node;
+                str.append("{type_name: \"");
+                str.append(node->name);
+                str.append("\", structure: ");
+                str.append(getString(node->type));
+                str.append("}");
+            }
+                break;
+            case N_VAR_DEF: {
+            	auto *node = (VarDef*)ori_node;
+                str.append("{var_name: \"");
+                str.append(node->name);
+                str.append("\", structure: ");
+                str.append(getString(node->type));
+                if (node->initialize_value != nullptr) {
+                	str.append(", init_value: ");
+                	str.append(getString(node->initialize_value));
+                }
+                str.append("}");
+            }
+                break;
+            case N_FUNCTION_DEF: {
+            	auto *node = (FunctionDef*)ori_node;
+                str.append("{func_name: \"");
+                str.append(node->name);
+                str.append("\", args: [");
+                for (int i = 0; i < node->args_name.size(); i++) {
+                	str.append("{arg_name:\"");
+                	str.append(node->args_name[i]);
+                	str.append("\", arg_type:");
+                	str.append(getString(node->args_type[i]));
+                	str.append("},")
+                }
+                str.append("]");
+                if (node->rtn_type != nullptr) {
+	                str.append(", return_type: ");
+	                str.append(getString(node->rtn_type));
+	            }
+                if (node->define != nullptr) {
+	                str.append(", defines: ");                
+	                str.append(getString(node->define));
+	            }
+                str.append(", body: ");
+                str.append(getString(node->body));
+                str.append("}");
+            }
+                break;
+            case N_ASSIGN_STM: {
+				auto *node = (AssignStm*)ori_node;
+                str.append("{left:\"");
+                str.append(node->left_value);
+                str.append("\",right:");
+                str.append(getString(node->right_value));
+                str.append("}");
+            }
+                break;
+            case N_CALL_STM: {
+				auto *node = (CallStm*)ori_node;
+                str.append("{func:\"");
+                str.append(node->name);
+                str.append("\",args:[");
+                for (auto arg: node->args) {
+                	str.append(getString(arg));
+                	str.append(",");
+                }
+                str.append("]}");
+            }
+                break;
+            case N_CASE_STM: {
+				auto *node = (CaseStm*)ori_node;
+                str.append("{switch_item:\"");
+                str.append(getString(node->object));
+                str.append("\",situations:[");
+                for (auto situation: node->situations) {
+                    str.append(getString(situation));
+                    str.append(",");
+                }
+                str.append("]}");
+            }
+                break;
+            case N_FOR_STM: {
+				auto *node = (ForStm*)ori_node;
+                str.append("{iter:\"");
+                str.append(node->iter);
+                str.append("\",start:");
+                str.append(getString(node->start));
+                str.append(",end:");
+                str.append(getString(node->end));
+                str.append(",step:");
+                if(step == 1) str.append("1");
+                else str.append("-1");
+                str.append(",body:");
+                str.append(getString(node->body));
+                str.append("]}");
+            }
+                break;
+            case N_GOTO_STM: {
+            	auto *node = (GotoStm*)ori_node;
+                str.append("{goto:");
+                char label[100];
+                sprintf(label, "%d", node->label);
+                str.append(label);
+                str.append("}");
+            }
+                break;
+            case N_IF_STM: {
+				auto *node = (IfStm*)ori_node;
+                str.append("{condition:");
+                str.append(getString(node->condition));
+                str.append(",true_body:");
+                str.append(getString(node->true_do));
+                if(node->false_do != nullptr) {
+                	str.append(",false_body:");
+                	str.append(getString(node->false_do));
+                }
+                str.append("}");
+            }
+                break;
+            case N_LABEL_STM: {
+				auto *node = (LabelStm*)ori_node;
+                str.append("{label: ");
+                char id[100];
+                sprintf(id, "%d", node->label);
+                str.append(id);
+                str.append("}");
+            }
+                break;
+            case N_REPEAT_STM: {
+            	auto *node = (RepeatStm*)ori_node;
+                str.append("{body:");
+                str.append(getString(node->loop));
+                str.append(",condition:");
+                str.append(getString(node->condition));
+                str.append("}");
+            }
+                break;
+            case N_WHILE_STM: {
+				auto *node = (WhileStm*)ori_node;
+                str.append("{condition:");
+                str.append(getString(node->condition));
+                str.append(",body:");
+                str.append(getString(node->loop));
+                str.append("}");
+            }
+                break;
+            case N_WITH_STM: {
+            	auto *node = (WithStm*)ori_node;
+                str.append("{with_var:\"");
+                str.append(node->name);
+                str.append("\",body:");
+                str.append(getString(node->body));
+                str.append("}");
+            }
+                break;
+            case N_BINARY_EXP: {
+                auto *node = (BinaryExp*)ori_node;
+                str.append("{bin_op:\"");
+                str.append(getOpNameByID(node->op_code));
+                str.append("\",operand1:");
+                str.append(getString(node->operand1));
+                str.append("\",operand2:");
+                str.append(getString(node->operand2));
+                str.append("}");
+            }
+                break;
+            case N_CALL_EXP: {
+				auto *node = (CallExp*)ori_node;
+                str.append("{func:\"");
+                str.append(node->name);
+                str.append("\",args:[");
+                for (auto arg: node->args) {
+                	str.append(getString(arg));
+                	str.append(",");
+                }
+                str.append("]}");
+            }
+                break;
+            case N_CONSTANT_EXP: {
+                auto *node = (ConstantExp*)ori_node;
+                str.append("{const_value:");
+                str.append(getString(node->value));
+                str.append("}");
+            }
+                break;
+            case N_MEMORY_EXP: {
+                auto *node = (MemoryExp*)ori_node;
+                str.append("{mem_addr:");
+                char hex_addr[100];
+                sprintf(hex_addr, "%lx", node->address);
+                str.append("\"}");
+            }
+                break;
+            case N_MONOCULAR_EXP: {
+                auto *node = (MonocularExp*)ori_node;
+                str.append("{mon_op:\"");
+                str.append(getOpNameByID(node->op_code));
+                str.append("\",operand:");
+                str.append(getString(node->operand));
+                str.append("}");
+            }
+                break;
+            case N_VARIABLE_EXP: {
+                auto *node = (VariableExp*)ori_node;
+                str.append("{var_name:\"");
+                str.append(node->name);
+                str.append("\"}");
+            }
+                break;
+            case N_TYPE: {
+            	auto *node = (Type*)ori_node;
+            	switch (value->base_type) {
+					case T_INTEGER: {
+		                str.append("\"integer\"");
+					}
+						break;
+					case T_REAL: {
+						str.append("\"real\"");
+					}
+						break;
+					case T_CHAR: {
+						str.append("\"char\"");
+					}
+						break;
+					case T_BOOLEAN: {
+						str.append("\"boolean\"");
+					}
+						break;
+					case T_SET: {
+						str.append("\"set\"");
+					}
+						break;
+					case T_ARRAY: {
+						str.append("{type:\"array\",num:");
+						char num[100];
+						sprintf(num, "%d", node->children_num);
+						str.append(num);
+						str.append(",child_type:");
+						str.append(getString(node->child_type[0]));
+						str.append("}");
+					}
+						break;
+					case T_RECORD: {
+						str.append("{type:\"record\",child_type:[");
+						for(auto child: node->child_type) {
+							str.append("{name:\"");
+							str.append(child->name);
+							str.append("\", type:")
+							str.append(getString(child));
+							str.append("},");
+						str.append("]}");
+					}
+						break;
+					default: {
+		                if (value->base_type < type_list.size()) str.append(type_list[value->base_type]->name);
+		                else str.append("\"There is something wrong. The type cannot be recognised.\"");
+		            }
+				}
+            }
+            	break;
+            default: {
+                str.append("\"There is something wrong. The node is unrecognised.\"");
+            }
         }
-            break;
-        case N_BODY: {
+    return str;
+}
 
-        }
-            break;
-        case N_SITUATION: {
-
-        }
-            break;
-        case N_LABEL_DEF: {
-
-        }
-            break;
-        case N_CONST_DEF: {
-
-        }
-            break;
-        case N_TYPE_DEF: {
-
-        }
-            break;
-        case N_VAR_DEF: {
-
-        }
-            break;
-        case N_FUNCTION_DEF: {
-
-        }
-            break;
-        case N_ASSIGN_STM: {
-
-        }
-            break;
-        case N_CALL_STM: {
-
-        }
-            break;
-        case N_CASE_STM: {
-
-        }
-            break;
-        case N_FOR_STM: {
-
-        }
-            break;
-        case N_GOTO_STM: {
-
-        }
-            break;
-        case N_IF_STM: {
-
-        }
-            break;
-        case N_LABEL_STM: {
-
-        }
-            break;
-        case N_REPEAT_STM: {
-
-        }
-            break;
-        case N_WHILE_STM: {
-
-        }
-            break;
-        case N_WITH_STM: {
-
-        }
-            break;
-        case N_BINARY_EXP: {
-
-        }
-            break;
-        case N_CALL_EXP: {
-
-        }
-            break;
-        case N_CONSTANT_EXP: {
-
-        }
-            break;
-        case N_MEMORY_EXP: {
-
-        }
-            break;
-        case N_MONOCULAR_EXP: {
-
-        }
-            break;
-        case N_VARIABLE_EXP: {
-
-        }
-            break;
-        default: {
-
-        }
-    }
+void printTree(std::string filename, Base *root) {
+    std::string str = getString(root);
+    std::ofstream SaveFile(filename + ".json");
+    SaveFile << str;
+    SaveFile.close();
 }

@@ -7,7 +7,6 @@
 
 #include <string>
 #include <vector>
-#include "type.h"
 #include "value.h"
 #include "common.h"
 
@@ -37,6 +36,15 @@
 #define N_MEMORY_EXP 43
 #define N_MONOCULAR_EXP 44
 #define N_VARIABLE_EXP 45
+#define N_TYPE 50
+// type code
+#define T_INTEGER 0
+#define T_REAL 1
+#define T_CHAR 2
+#define T_BOOLEAN 3
+#define T_SET 4
+#define T_ARRAY 5
+#define T_RECORD 6
 
 // base object
 class Base;
@@ -71,6 +79,8 @@ class CallExp;
 class ConstantExp;
 class VariableExp;
 class MemoryExp;
+// type
+class Type;
 
 // define
 class Base {
@@ -94,7 +104,7 @@ public:
 
 class Program: public Base {
 public:
-    std::string head_name;
+    std::string name;
     Define *define = nullptr;
     Body *body = new Body();
 
@@ -237,11 +247,12 @@ public:
 
 class ForStm: public Stm {
 public:
+    std::string iter;
     Exp *start = nullptr, *end = nullptr;
     int step; // 1 or -1
     Body *loop = new Body();
 
-    ForStm(Exp*, Exp*, int) = default;
+    ForStm(const std::string &, Exp*, Exp*, int) = default;
 };
 
 class WhileStm: public Stm {
@@ -314,6 +325,24 @@ public:
     explicit MemoryExp(ADDRESS address);
 };
 
-void printTree(Base root);
+class Type: public Base {
+public:
+    std::string name; // use what name to find this value, may be empty
+    int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record 7~n: other type defined by user
+                   // string is considered as an array of char
+    int children_num; // the number of children
+    std::vector<Type*> child_type; // a list of the type of children
+
+    Type();
+};
+
+// example: printTree("log", new Program())
+void printTree(std::string filename, Base *root);
+// example: addType(new Type())
+void addType(Type *type);
+// example: Type *type = findType("arr");
+Type *findType(std::string type_name);
+
+extern std::vector<Type*> type_list;
 
 #endif //SPLCOMPILER_TREE_H
