@@ -11,7 +11,7 @@
 
 class Value {
 public:
-    int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record
+    int base_type; // 0: int 1: real 2: char 3: boolean 4: string 5: array 6: record
     ADDRESS address;
     union return_value {
         INTEGER integer_value;

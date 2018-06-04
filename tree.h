@@ -34,17 +34,17 @@
 #define N_CALL_EXP 41
 #define N_CONSTANT_EXP 42
 #define N_MEMORY_EXP 43
-#define N_MONOCULAR_EXP 44
+#define N_UNARY_EXP 44
 #define N_VARIABLE_EXP 45
 #define N_TYPE 50
 // type code
-#define T_INTEGER 0
-#define T_REAL 1
-#define T_CHAR 2
-#define T_BOOLEAN 3
-#define T_SET 4
-#define T_ARRAY 5
-#define T_RECORD 6
+#define TY_INTEGER 0
+#define TY_REAL 1
+#define TY_CHAR 2
+#define TY_BOOLEAN 3
+#define TY_SET 4
+#define TY_ARRAY 5
+#define TY_RECORD 6
 
 // base object
 class Base;
@@ -103,6 +103,15 @@ public:
     explicit Exp(int type = 0);
 };
 
+class Body : public Base {
+public:
+    std::vector<Stm *> stms;
+
+    Body();
+
+    void addStm(Stm *);
+};
+
 class Program : public Base {
 public:
     std::string name;
@@ -135,14 +144,6 @@ public:
     void addFunction(FunctionDef *);
 };
 
-class Body : public Base {
-public:
-    std::vector<Stm *> stms;
-
-    Body();
-
-    void addStm(Stm *);
-};
 
 class Situation : public Base {
 public:
@@ -212,7 +213,7 @@ public:
     std::string left_value;
     Exp *right_value;
 
-    AssignStm(const std::string &, Exp *) = default;
+    AssignStm(const std::string &, Exp *);
 };
 
 class WithStm : public Stm {
@@ -270,7 +271,7 @@ public:
     int step; // 1 or -1
     Body *loop = new Body();
 
-    ForStm(const std::string &, Exp *, Exp *, int) = default;
+    ForStm(const std::string &, Exp *, Exp *, int);
 };
 
 class WhileStm : public Stm {

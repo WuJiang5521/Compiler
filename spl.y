@@ -5,6 +5,8 @@
 #include "cst.h"
 #include "symtab.h"
 #include "common.h"
+#include "tree.h"
+#include "translator.h"
 
 #define NOTHING -1
 
@@ -38,7 +40,7 @@ void yyerror(const char* s) {
 %token<iVal> S_ID S_INTEGER S_REAL S_CHAR S_STRING
 
 
-%type<tVal> program program_head routine sub_routine routine_head label_part const_part const_expr_list const_value type_part type_decl_list 
+%type<tVal> program program_head routine sub_routine routine_head label_part label_list const_part const_expr_list const_value type_part type_decl_list 
     type_definition type_decl simple_type_decl array_type_decl record_type_decl field_decl_list field_decl name_list var_part var_decl_list 
     var_decl routine_part function_decl function_head procedure_decl procedure_head parameters para_decl_list para_type_list var_para_list 
     val_para_list routine_body compound_stmt stmt_list stmt non_label_stmt assign_stmt proc_stmt if_stmt else_clause repeat_stmt while_stmt 
@@ -54,6 +56,7 @@ void yyerror(const char* s) {
 program : program_head routine T_DOT
     {
         cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
+        Base* ast_root = Translator::translate(root);
         $$ = root;
     };
 
@@ -89,14 +92,23 @@ routine_head : label_part const_part type_part var_part routine_part
         $$ = create_node(NOTHING, ROUTINE_HEAD, $1, $2, $3, $4, $5);
     };
 
-label_part : S_INTEGER
+label_part : label_list
     {
-        $$ = create_node($1, LABEL_PART, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, LABEL_PART, $1, NULL, NULL, NULL, NULL);
     }
     | 
     {
         $$ = create_node(NOTHING, LABEL_PART, NULL, NULL, NULL, NULL, NULL);
     } /* empty */;
+
+label_list : label_list T_COMMA S_INTEGER
+    {
+        $$ = create_node($3, LABEL_LIST, $1, NULL, NULL, NULL, NULL);
+    }
+    | S_INTEGER
+    {
+        $$ = create_node($1, LABEL_LIST, NULL, NULL, NULL, NULL, NULL);
+    };
 
 const_part : T_CONST const_expr_list
     {
@@ -557,27 +569,27 @@ expression_list : expression_list T_COMMA expression
 
 expression : expression T_GE expr
 	{
-		$$ = create_node(T_GE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GE, EXPRESSION_GE, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_GT expr
 	{
-		$$ = create_node(T_GT, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GT, EXPRESSION_GT, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LE expr
 	{
-		$$ = create_node(T_LE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LE, EXPRESSION_LE, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LT expr
 	{
-		$$ = create_node(T_LT, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LT, EXPRESSION_LT, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_EQUAL expr
 	{
-		$$ = create_node(T_EQUAL, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_EQUAL, EXPRESSION_EQ, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_NE expr
 	{
-		$$ = create_node(T_NE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_NE, EXPRESSION_NE, $1, $3, NULL, NULL, NULL);
 	}
 	| expr
 	{
