@@ -7,7 +7,6 @@
 
 #include <string>
 #include <vector>
-#include "type.h"
 #include "value.h"
 #include "common.h"
 
@@ -37,6 +36,15 @@
 #define N_MEMORY_EXP 43
 #define N_MONOCULAR_EXP 44
 #define N_VARIABLE_EXP 45
+#define N_TYPE 50
+// type code
+#define T_INTEGER 0
+#define T_REAL 1
+#define T_CHAR 2
+#define T_BOOLEAN 3
+#define T_SET 4
+#define T_ARRAY 5
+#define T_RECORD 6
 
 // base object
 class Base;
@@ -71,6 +79,8 @@ class CallExp;
 class ConstantExp;
 class VariableExp;
 class MemoryExp;
+// type
+class Type;
 
 // define
 class Base {
@@ -80,171 +90,190 @@ public:
     explicit Base(int type = 0);
 };
 
-class Stm: public Base {
+class Stm : public Base {
 public:
     explicit Stm(int type = 0);
 };
 
-class Exp: public Base {
+class Exp : public Base {
 public:
-    Value* return_value;
+    Value *return_value;
+    Type *return_type;
 
     explicit Exp(int type = 0);
 };
 
-class Program: public Base {
+class Program : public Base {
 public:
-    std::string head_name;
+    std::string name;
     Define *define = nullptr;
     Body *body = new Body();
 
     explicit Program(const std::string &);
-    void addDefine(Define*);
+
+    void addDefine(Define *);
 };
 
-class Define: public Base {
+class Define : public Base {
 public:
-    std::vector<LabelDef*> label_def; // can be empty
-    std::vector<ConstDef*> const_def; // can be empty
-    std::vector<TypeDef*> type_def; // can be empty
-    std::vector<VarDef*> var_def; // can be empty
-    std::vector<FunctionDef*> function_def; // can be empty
+    std::vector<LabelDef *> label_def; // can be empty
+    std::vector<ConstDef *> const_def; // can be empty
+    std::vector<TypeDef *> type_def; // can be empty
+    std::vector<VarDef *> var_def; // can be empty
+    std::vector<FunctionDef *> function_def; // can be empty
 
     Define();
-    void addLabel(LabelDef*);
-    void addConst(ConstDef*);
-    void addType(TypeDef*);
-    void addVar(VarDef*);
-    void addFunction(FunctionDef*);
+
+    void addLabel(LabelDef *);
+
+    void addConst(ConstDef *);
+
+    void addType(TypeDef *);
+
+    void addVar(VarDef *);
+
+    void addFunction(FunctionDef *);
 };
 
-class Body: public Base {
+class Body : public Base {
 public:
-    std::vector<Stm*> stms;
+    std::vector<Stm *> stms;
 
     Body();
-    void addStm(Stm*);
+
+    void addStm(Stm *);
 };
 
-class Situation: public Base {
+class Situation : public Base {
 public:
-    std::vector<Exp*> match_list;
+    std::vector<Exp *> match_list;
     Body *solution = new Body();
 
     Situation();
-    void addMatch(Exp*);
+
+    void addMatch(Exp *);
 };
 
-class LabelDef: public Base {
+class LabelDef : public Base {
 public:
     int label_index;
 
     explicit LabelDef(int);
 };
 
-class ConstDef: public Base {
+class ConstDef : public Base {
 public:
     std::string name;
     Exp *value = nullptr; // cannot be nullptr
 
-    ConstDef(const std::string &, Exp*);
+    ConstDef(const std::string &, Exp *);
 };
 
-class TypeDef: public Base {
+class TypeDef : public Base {
 public:
     std::string name;
     Type *type = nullptr; // cannot be nullptr
 
-    TypeDef(const std::string &, Type*);
+    TypeDef(const std::string &, Type *);
 };
 
-class VarDef: public Base {
+class VarDef : public Base {
 public:
     std::string name;
     Type *type = nullptr; // cannot be null
     Value *initializing_value = nullptr; // can be null
 
-    VarDef(const std::string &, Type*);
-    VarDef(const std::string &, Type*, Value*);
+    VarDef(const std::string &, Type *);
+
+    VarDef(const std::string &, Type *, Value *);
 };
 
-class FunctionDef: public Base {
+class FunctionDef : public Base {
 public:
     std::string name;
-    std::vector<Type*> args_type;
+    std::vector<Type *> args_type;
     std::vector<std::string> args_name;
+    std::vector<bool> args_is_formal_parameters;
     Type *rtn_type = nullptr;
     Define *define = nullptr;
     Body *body = new Body();
 
     explicit FunctionDef(const std::string &);
-    void addArgs(const std::string &, Type*);
-    void setReturnType(Type*);
-    void addDefine(Define*);
+
+    void addArgs(const std::string &, Type *, bool);
+
+    void setReturnType(Type *);
+
+    void addDefine(Define *);
 };
 
-class AssignStm: public Stm {
+class AssignStm : public Stm {
 public:
     std::string left_value;
     Exp *right_value;
 
-    AssignStm(const std::string&, Exp*) = default;
+    AssignStm(const std::string &, Exp *) = default;
 };
 
-class WithStm: public Stm {
+class WithStm : public Stm {
 public:
     std::string name;
     Body *body = new Body();
 
-    explicit WithStm(const std::string&);
+    explicit WithStm(const std::string &);
 };
 
-class CallStm: public Stm {
+class CallStm : public Stm {
 public:
     std::string name;
     std::vector<Exp *> args;
 
     explicit CallStm(const std::string &);
+
     void addArgs(Exp *);
 };
 
-class LabelStm: public Stm {
+class LabelStm : public Stm {
 public:
     int label;
 
     explicit LabelStm(const int &);
 };
 
-class IfStm: public Stm {
+class IfStm : public Stm {
 public:
     Exp *condition = nullptr;
     Body *true_do = new Body(); // cannot be nullptr
     Body *false_do = nullptr; // can be nullptr
 
     IfStm() = default;
+
     void setCondition(Exp *);
+
     void addFalse();
 };
 
-class CaseStm: public Stm {
+class CaseStm : public Stm {
 public:
     Exp *object;
-    std::vector<Situation*> situations;
+    std::vector<Situation *> situations;
 
     explicit CaseStm(Exp *);
+
     void addSituation(Situation *);
 };
 
-class ForStm: public Stm {
+class ForStm : public Stm {
 public:
+    std::string iter;
     Exp *start = nullptr, *end = nullptr;
     int step; // 1 or -1
     Body *loop = new Body();
 
-    ForStm(Exp*, Exp*, int) = default;
+    ForStm(const std::string &, Exp *, Exp *, int) = default;
 };
 
-class WhileStm: public Stm {
+class WhileStm : public Stm {
 public:
     Exp *condition = nullptr;
     Body *loop = new Body();
@@ -252,16 +281,17 @@ public:
     explicit WhileStm(Exp *);
 };
 
-class RepeatStm: public Stm {
+class RepeatStm : public Stm {
 public:
     Exp *condition = nullptr;
     Body *loop = new Body();
 
     RepeatStm() = default;
+
     void setCondition(Exp *);
 };
 
-class GotoStm: public Stm {
+class GotoStm : public Stm {
 public:
     int label;
 
@@ -276,44 +306,65 @@ public:
     UnaryExp(int, Exp*);
 };
 
-class BinaryExp: public Exp {
+class BinaryExp : public Exp {
 public:
     int op_code;
     Exp *operand1, *operand2;
 
-    BinaryExp(int, Exp*, Exp*);
+    BinaryExp(int, Exp *, Exp *);
 };
 
-class CallExp: public Exp {
+class CallExp : public Exp {
 public:
     std::string name;
-    std::vector<Exp*> args;
+    std::vector<Exp *> args;
 
     explicit CallExp(const std::string &);
+
     void addArgs(Exp *);
 };
 
-class ConstantExp: public Exp {
+class ConstantExp : public Exp {
 public:
     Value *value;
 
     explicit ConstantExp(Value *);
 };
 
-class VariableExp: public Exp {
+class VariableExp : public Exp {
 public:
     std::string name;
 
     explicit VariableExp(const std::string &);
 };
 
-class MemoryExp: public Exp {
+class MemoryExp : public Exp {
 public:
     ADDRESS address;
 
     explicit MemoryExp(ADDRESS address);
 };
 
-void printTree(Base root);
+class Type : public Base {
+public:
+    std::string name; // use what name to find this value, may be empty
+    int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record 7~n: other type defined by user
+    // string is considered as an array of char
+    int array_start, array_end; // the index for array. useless if the type is not an array
+    std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
+
+    Type();
+};
+
+// example: printTree("log", new Program())
+void printTree(std::string filename, Base *root);
+
+// example: addType(new Type())
+void addType(Type *type);
+
+// example: Type *type = findType("arr");
+Type *findType(std::string type_name);
+
+extern std::vector<Type *> type_list;
 
 #endif //SPLCOMPILER_TREE_H
