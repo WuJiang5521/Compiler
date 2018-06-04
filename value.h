@@ -9,9 +9,8 @@
 #include <vector>
 #include "common.h"
 
-
-
 class Value {
+public:
     int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record
     ADDRESS address;
     union {
@@ -20,7 +19,7 @@ class Value {
         CHAR char_value;
         BOOLEAN boolean_value;
         std::vector<Value*> children_value; // a list of the value of children
-    };
+    } val;
 };
 
 #endif //SPLCOMPILER_VALUE_H
