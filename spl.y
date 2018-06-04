@@ -4,14 +4,20 @@
 #include <string.h>
 #include "cst.h"
 #include "symtab.h"
+#include "common.h"
 
 #define NOTHING -1
 
-int yylex();
-void yyerror(const char* s);
+extern "C" int yylex(void);
+extern "C" FILE* yyin;
 
 int currentSymTabSize = 0;
 sym_tab_node symtab[SYM_TAB_LEN];
+
+void yyerror(const char* s) {
+	fprintf(stderr, "Parse error: %s\n", s);
+	exit(1);
+}
 
 %}
 
@@ -26,19 +32,10 @@ sym_tab_node symtab[SYM_TAB_LEN];
 
 %union {
     int iVal;
-    float fVal;
-    char cVal;
-    char* sVal;
     cst_tree tVal;
 }
 
-%token<iVal> S_ID S_INTEGER
-
-%token<fVal> S_REAL
-
-%token<cVal> S_CHAR
-
-%token<sVal> S_STRING
+%token<iVal> S_ID S_INTEGER S_REAL S_CHAR S_STRING
 
 
 %type<tVal> program program_head routine sub_routine routine_head label_part const_part const_expr_list const_value type_part type_decl_list 
@@ -48,15 +45,33 @@ sym_tab_node symtab[SYM_TAB_LEN];
     for_stmt direction case_stmt case_expr_list case_expr goto_stmt expression_list expression expr term factor args_list sys_type sys_funct 
     sys_proc sys_con
 
+%nonassoc "then"
+%nonassoc T_ELSE
+%nonassoc T_PROCEDURE
+%nonassoc T_FUNCTION
+
 %%
 program : program_head routine T_DOT
     {
-        $$ = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
+        cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
+        $$ = root;
     };
 
 program_head : T_PROGRAM S_ID T_SEMI
     {
         $$ = create_node($2, PROGRAM_HEAD, NULL, NULL, NULL, NULL, NULL);
+    }
+    | T_PROGRAM S_ID T_LP program_head_para T_RP T_SEMI
+    {
+        $$ = create_node($2, PROGRAM_HEAD, NULL, NULL, NULL, NULL, NULL);
+    }
+    ;
+
+program_head_para : program_head_para T_COMMA S_ID
+    {
+    }
+    | S_ID
+    {
     };
 
 routine : routine_head routine_body
@@ -294,7 +309,7 @@ routine_part: routine_part function_decl
     {
         $$ = create_node(NOTHING, ROUTINE_PART, $1, NULL, NULL, NULL, NULL);
     }
-	|
+	|   %prec "then"
     {
         $$ = create_node(NOTHING, ROUTINE_PART, NULL, NULL, NULL, NULL, NULL);
     } /* empty */;
@@ -339,11 +354,11 @@ para_decl_list : para_decl_list T_SEMI para_type_list
 
 para_type_list : var_para_list T_COLON simple_type_decl
     {
-        $$ = create_node(NOTHING, PARA_TYPE_LIST, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PARA_TYPE_LIST_1, $1, $3, NULL, NULL, NULL);
     }
 	| val_para_list T_COLON simple_type_decl
     {
-        $$ = create_node(NOTHING, PARA_TYPE_LIST, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PARA_TYPE_LIST_2, $1, $3, NULL, NULL, NULL);
     };
 
 var_para_list : T_VAR name_list
@@ -474,7 +489,7 @@ else_clause : T_ELSE stmt
 	{
 		$$ = create_node(NOTHING, ELSE_CLAUSE, $2, NULL, NULL, NULL, NULL);
 	}
-	|
+	|   %prec "then"
     {
 		$$ = create_node(NOTHING, ELSE_CLAUSE, NULL, NULL, NULL, NULL, NULL);
     } /* empty */;
@@ -693,4 +708,13 @@ args_list : args_list T_COMMA expression
 	};
 
 %%
+
+int main() {
+    yyin = stdin;
+    do {
+        yyparse();
+    } while (!feof(yyin));
+
+    return 0;
+}
 

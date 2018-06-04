@@ -1,27 +1,28 @@
 %{
-#ifdef DEBUG_PRINT 
-#define TOKEN(tok)  printf(#tok "\n");
-#define SYMBOL(sym) printf(#sym ": %s\n", yytext);
-#else
 #include <string.h>
+#include <stdio.h>
+#include "cst.h"
+#include "symtab.h"
 #include "spl.tab.h"
+extern "C" int yylex();
+extern "C" void yyerror(const char* s);
 int installId(char*, unsigned);
 int lookup(char*);
 extern sym_tab_node symtab[];
-extern int currentSymTabSize = 0;
-#define TOKEN(tok)  return(tok);
-#endif
+extern int currentSymTabSize;
+#define TOKEN(tok)  { return(tok);}
 %}
 
 delimiter       [\t\n\r ]
-char            [a-zA-Z]
-char_const      '\[a-zA-Z]\'
-string_const    "\[a-zA-Z]*\"
 digit           [0-9]
+char            [a-zA-Z]
+char_const      \'.\'
+string_const    \'.*\'
+real            ({digit}+\.{digit}+)|(\.{digit}+)
 integer         {digit}+
-real            ({digit}\.{digit}*)|(.{digit}+)
 id              {char}({char}|{digit})*
 ws              {delimiter}+
+comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 
 %%
 
@@ -45,6 +46,7 @@ ws              {delimiter}+
 ":="        TOKEN(T_ASSIGN)
 "NOT"       TOKEN(T_NOT)
 "MOD"       TOKEN(T_MOD)
+"%"         TOKEN(T_MOD)
 ".."        TOKEN(T_DOTDOT)
 ";"         TOKEN(T_SEMI)
 
@@ -97,21 +99,26 @@ ws              {delimiter}+
 "integer"   TOKEN(T_INTEGER)
 "real"      TOKEN(T_REAL)
 
-{id}                { yylval.iVal = installId(yytext); return S_ID; }
-{char_const}        { yylval.cVal = yytext; return S_CHAR; }
-{string_const}      { yylval.sVal = yytext; return S_STRING; }
+{id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
+{char_const}        { yylval.iVal = installId(yytext, 2); return S_CHAR; }
+{string_const}      { yylval.iVal = installId(yytext, 0); return S_STRING; }
 {integer}           { yylval.iVal = atoi(yytext); return S_INTEGER; }
-{real}              { yylval.fVal = atof(yytext); return S_REAL; }
+{real}              { yylval.iVal = installId(yytext, 1); return S_REAL; }
 {ws}            // do nothing
+{comment}       // do nothing
 .               printf("ERROR. Unexpected symbol found. %s %d\n", yytext, yytext[0]);
 
 %%
 
-int installId(char* id, unsigned type = 0) {
+// 
+int installId(char* id, unsigned type = -1) {
+    extern sym_tab_node symtab[];
+    extern int currentSymTabSize;
     int result = lookup(id);
     // new symbol
     if (result == -1) {
         strcpy(symtab[currentSymTabSize].id, id);
+        symtab[currentSymTabSize].type = type;
         return currentSymTabSize++;
     }
     // old symbol
@@ -120,6 +127,8 @@ int installId(char* id, unsigned type = 0) {
     }
 }
 int lookup(char* id) {
+    extern sym_tab_node symtab[];
+    extern int currentSymTabSize;
     for (int i = 0; i < currentSymTabSize; i++) {
         if (strcmp(id, symtab[i].id) == 0) {
             return i;
