@@ -2,32 +2,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cst.h"
+#include "symtab.h"
+#include "common.h"
+#include "tree.h"
+#include "translator.h"
 
 #define NOTHING -1
 
-enum ParseTreeNodeType {
-  PROGRAM, PROGRAM_HEAD, ROUTINE, SUB_ROUTINE, ROUTINE_HEAD, LABEL_PART, CONST_PART, CONST_EXPR_LIST, CONST_VALUE, CONST_VALUE_INT, 
-  CONST_VALUE_REAL, CONST_VALUE_CHAR, CONST_VALUE_STR, TYPE_PART, TYPE_DECL_LIST, TYPE_DEFINITION, TYPE_DECL, SIMPLE_TYPE_DECL, 
-  ARRAY_TYPE_DECL, RECORD_TYPE_DECL, FIELD_DECL_LIST, FIELD_DECL, NAME_LIST, VAR_PART, VAR_DECL_LIST, VAR_DECL, ROUTINE_PART, 
-  FUNCTION_DECL, FUNCTION_HEAD, PROCEDURE_DECL, PROCEDURE_HEAD, PARAMETERS, PARA_DECL_LIST, PARA_TYPE_LIST, VAR_PARA_LIST, 
-  VAL_PARA_LIST, ROUTINE_BODY, COMPOUND_STMT, STMT_LIST, STMT, NON_LABEL_STMT, ASSIGN_STMT, PROC_STMT, IF_STMT, ELSE_CLAUSE, 
-  REPEAT_STMT, WHILE_STMT, FOR_STMT, DIRECTION, CASE_STMT, CASE_EXPR_LIST, CASE_EXPR, GOTO_STMT, EXPRESSION_LIST, EXPRESSION, 
-  EXPR, TERM, FACTOR, ARGS_LIST, SYS_TYPE, SYS_FUNCT, SYS_PROC, SYS_CON
-};
+extern "C" int yylex(void);
+extern "C" FILE* yyin;
 
-typedef struct treeNode node;
-typedef node* tree;
-struct treeNode {
-  int item;
-  int node_id;
-  tree first;
-  tree second;
-  tree third;
-  tree fourth;
-  tree fifth;
-};
+int currentSymTabSize = 0;
+sym_tab_node symtab[SYM_TAB_LEN];
 
-tree create_node(int ival, int case_id, tree t1, tree t2, tree t3, tree t4, tree t5);
+void yyerror(const char* s) {
+	fprintf(stderr, "Parse error: %s\n", s);
+	exit(1);
+}
 
 %}
 
@@ -42,27 +34,47 @@ tree create_node(int ival, int case_id, tree t1, tree t2, tree t3, tree t4, tree
 
 %union {
     int iVal;
-    tree tVal;
+    cst_tree tVal;
 }
 
-%token<iVal> S_ID S_CHAR S_INTEGER S_REAL S_STRING
+%token<iVal> S_ID S_INTEGER S_REAL S_CHAR S_STRING
 
-%type<tVal> program program_head routine sub_routine routine_head label_part const_part const_expr_list const_value type_part type_decl_list 
+
+%type<tVal> program program_head routine sub_routine routine_head label_part label_list const_part const_expr_list const_value type_part type_decl_list 
     type_definition type_decl simple_type_decl array_type_decl record_type_decl field_decl_list field_decl name_list var_part var_decl_list 
     var_decl routine_part function_decl function_head procedure_decl procedure_head parameters para_decl_list para_type_list var_para_list 
     val_para_list routine_body compound_stmt stmt_list stmt non_label_stmt assign_stmt proc_stmt if_stmt else_clause repeat_stmt while_stmt 
     for_stmt direction case_stmt case_expr_list case_expr goto_stmt expression_list expression expr term factor args_list sys_type sys_funct 
     sys_proc sys_con
 
+%nonassoc "then"
+%nonassoc T_ELSE
+%nonassoc T_PROCEDURE
+%nonassoc T_FUNCTION
+
 %%
 program : program_head routine T_DOT
     {
-        $$ = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
+        cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
+        Base* ast_root = Translator::translate(root);
+        $$ = root;
     };
 
 program_head : T_PROGRAM S_ID T_SEMI
     {
-        $$ = create_node($2, PROCEDURE_HEAD, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node($2, PROGRAM_HEAD, NULL, NULL, NULL, NULL, NULL);
+    }
+    | T_PROGRAM S_ID T_LP program_head_para T_RP T_SEMI
+    {
+        $$ = create_node($2, PROGRAM_HEAD, NULL, NULL, NULL, NULL, NULL);
+    }
+    ;
+
+program_head_para : program_head_para T_COMMA S_ID
+    {
+    }
+    | S_ID
+    {
     };
 
 routine : routine_head routine_body
@@ -80,17 +92,32 @@ routine_head : label_part const_part type_part var_part routine_part
         $$ = create_node(NOTHING, ROUTINE_HEAD, $1, $2, $3, $4, $5);
     };
 
-label_part : S_INTEGER
+label_part : label_list
     {
-        $$ = create_node($1, LABEL_PART, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, LABEL_PART, $1, NULL, NULL, NULL, NULL);
     }
-    | /* empty */;
+    | 
+    {
+        $$ = create_node(NOTHING, LABEL_PART, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
+
+label_list : label_list T_COMMA S_INTEGER
+    {
+        $$ = create_node($3, LABEL_LIST, $1, NULL, NULL, NULL, NULL);
+    }
+    | S_INTEGER
+    {
+        $$ = create_node($1, LABEL_LIST, NULL, NULL, NULL, NULL, NULL);
+    };
 
 const_part : T_CONST const_expr_list
     {
         $$ = create_node(NOTHING, CONST_PART, $2, NULL, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|
+    {
+        $$ = create_node(NOTHING, CONST_PART, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 const_expr_list : const_expr_list S_ID T_EQUAL const_value T_SEMI
     {
@@ -139,7 +166,10 @@ type_part : T_TYPE type_decl_list
     {
         $$ = create_node(NOTHING, TYPE_PART, $2, NULL, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|
+    {
+        $$ = create_node(NOTHING, TYPE_PART, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 type_decl_list : type_decl_list type_definition
     {
@@ -203,19 +233,19 @@ simple_type_decl : sys_type
     }
 	| T_MINUS const_value T_DOTDOT const_value
     {
-        tree tmp = create_node(T_MINUS, FACTOR, $2, NULL, NULL, NULL, NULL);
+        cst_tree tmp = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
         $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp, $4, NULL, NULL, NULL);
     }
 	| T_MINUS const_value T_DOTDOT T_MINUS const_value
     {
-        tree tmp1 = create_node(T_MINUS, FACTOR, $2, NULL, NULL, NULL, NULL);
-        tree tmp2 = create_node(T_MINUS, FACTOR, $5, NULL, NULL, NULL, NULL);
+        cst_tree tmp1 = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
+        cst_tree tmp2 = create_node(T_MINUS, FACTOR_8, $5, NULL, NULL, NULL, NULL);
         $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp1, tmp2, NULL, NULL, NULL);
     }
 	| S_ID T_DOTDOT S_ID
     {
-        tree tmp1 = create_node($1, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
-        tree tmp2 = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp1 = create_node($1, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp2 = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
         $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp1, tmp2, NULL, NULL, NULL);
     };
 
@@ -256,7 +286,10 @@ var_part : T_VAR var_decl_list
     {
         $$ = create_node(NOTHING, VAR_PART, $2, NULL, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|
+    {
+        $$ = create_node(NOTHING, VAR_PART, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 var_decl_list : var_decl_list var_decl
     {
@@ -288,7 +321,10 @@ routine_part: routine_part function_decl
     {
         $$ = create_node(NOTHING, ROUTINE_PART, $1, NULL, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|   %prec "then"
+    {
+        $$ = create_node(NOTHING, ROUTINE_PART, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 function_decl : function_head T_SEMI sub_routine T_SEMI
     {
@@ -314,7 +350,10 @@ parameters : T_LP para_decl_list T_RP
     {
         $$ = create_node(NOTHING, PARAMETERS, $2, NULL, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|
+    {
+        $$ = create_node(NOTHING, PARAMETERS, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 para_decl_list : para_decl_list T_SEMI para_type_list
     {
@@ -327,11 +366,11 @@ para_decl_list : para_decl_list T_SEMI para_type_list
 
 para_type_list : var_para_list T_COLON simple_type_decl
     {
-        $$ = create_node(NOTHING, PARA_TYPE_LIST, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PARA_TYPE_LIST_1, $1, $3, NULL, NULL, NULL);
     }
 	| val_para_list T_COLON simple_type_decl
     {
-        $$ = create_node(NOTHING, PARA_TYPE_LIST, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PARA_TYPE_LIST_2, $1, $3, NULL, NULL, NULL);
     };
 
 var_para_list : T_VAR name_list
@@ -358,7 +397,10 @@ stmt_list : stmt_list stmt T_SEMI
     {
         $$ = create_node(NOTHING, STMT_LIST, $1, $2, NULL, NULL, NULL);
     }
-	| /* empty */;
+	|
+    {
+        $$ = create_node(NOTHING, STMT_LIST, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 stmt : S_INTEGER T_COLON non_label_stmt
     {
@@ -416,7 +458,7 @@ assign_stmt : S_ID T_ASSIGN expression      // id = 3
     }
 	| S_ID T_DOT S_ID T_ASSIGN expression       // id.key = 10
     {
-        tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
         $$ = create_node($1, ASSIGN_STMT, tmp, $5, NULL, NULL, NULL);
     };
 
@@ -459,7 +501,10 @@ else_clause : T_ELSE stmt
 	{
 		$$ = create_node(NOTHING, ELSE_CLAUSE, $2, NULL, NULL, NULL, NULL);
 	}
-	| /* empty */;
+	|   %prec "then"
+    {
+		$$ = create_node(NOTHING, ELSE_CLAUSE, NULL, NULL, NULL, NULL, NULL);
+    } /* empty */;
 
 repeat_stmt : T_REPEAT stmt_list T_UNTIL expression
 	{
@@ -524,27 +569,27 @@ expression_list : expression_list T_COMMA expression
 
 expression : expression T_GE expr
 	{
-		$$ = create_node(T_GE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GE, EXPRESSION_GE, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_GT expr
 	{
-		$$ = create_node(T_GT, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GT, EXPRESSION_GT, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LE expr
 	{
-		$$ = create_node(T_LE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LE, EXPRESSION_LE, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LT expr
 	{
-		$$ = create_node(T_LT, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LT, EXPRESSION_LT, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_EQUAL expr
 	{
-		$$ = create_node(T_EQUAL, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_EQUAL, EXPRESSION_EQ, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_NE expr
 	{
-		$$ = create_node(T_NE, EXPRESSION, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_NE, EXPRESSION_NE, $1, $3, NULL, NULL, NULL);
 	}
 	| expr
 	{
@@ -553,15 +598,15 @@ expression : expression T_GE expr
 
 expr : expr T_PLUS term
 	{
-		$$ = create_node(T_PLUS, EXPR, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_PLUS, PLUS_EXPR, $1, $3, NULL, NULL, NULL);
 	}
 	| expr T_MINUS term
 	{
-		$$ = create_node(T_MINUS, EXPR, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_MINUS, MINUS_EXPR, $1, $3, NULL, NULL, NULL);
 	}
 	| expr T_OR term
 	{
-		$$ = create_node(T_OR, EXPR, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_OR, OR_EXPR, $1, $3, NULL, NULL, NULL);
 	}
 	| term
 	{
@@ -570,19 +615,19 @@ expr : expr T_PLUS term
 
 term : term T_MUL factor
 	{
-		$$ = create_node(T_MUL, TERM, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_MUL, MUL_TERM, $1, $3, NULL, NULL, NULL);
 	}
 	| term T_DIV factor
 	{
-		$$ = create_node(T_DIV, TERM, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_DIV, DIV_TERM, $1, $3, NULL, NULL, NULL);
 	}
 	| term T_MOD factor
 	{
-		$$ = create_node(T_MOD, TERM, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_MOD, MOD_TERM, $1, $3, NULL, NULL, NULL);
 	}
 	| term T_AND factor
 	{
-		$$ = create_node(T_AND, TERM, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_AND, AND_TERM, $1, $3, NULL, NULL, NULL);
 	}
 	| factor
 	{
@@ -625,44 +670,44 @@ sys_funct : T_ABS
 
 factor : S_ID
 	{
-		$$ = create_node($1, FACTOR, NULL, NULL, NULL, NULL, NULL);
+		$$ = create_node($1, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
 	}
 	| S_ID T_LP args_list T_RP
 	{
-		$$ = create_node($1, FACTOR, $3, NULL, NULL, NULL, NULL);
+		$$ = create_node($1, FACTOR_2, $3, NULL, NULL, NULL, NULL);
 	}
 	| sys_funct
 	{
-		$$ = create_node(NOTHING, FACTOR, $1, NULL, NULL, NULL, NULL);
+		$$ = create_node(NOTHING, FACTOR_3, $1, NULL, NULL, NULL, NULL);
 	}
 	| sys_funct T_LP args_list T_RP
 	{
-		$$ = create_node(NOTHING, FACTOR, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(NOTHING, FACTOR_4, $1, $3, NULL, NULL, NULL);
 	}
 	| const_value
 	{
-		$$ = create_node(NOTHING, FACTOR, $1, NULL, NULL, NULL, NULL);
+		$$ = create_node(NOTHING, FACTOR_5, $1, NULL, NULL, NULL, NULL);
 	}
 	| T_LP expression T_RP
 	{
-		$$ = create_node(NOTHING, FACTOR, $2, NULL, NULL, NULL, NULL);
+		$$ = create_node(NOTHING, FACTOR_6, $2, NULL, NULL, NULL, NULL);
 	}
 	| T_NOT factor
 	{
-		$$ = create_node(T_NOT, FACTOR, $2, NULL, NULL, NULL, NULL);
+		$$ = create_node(T_NOT, FACTOR_7, $2, NULL, NULL, NULL, NULL);
 	}
 	| T_MINUS factor
 	{
-		$$ = create_node(T_MINUS, FACTOR, $2, NULL, NULL, NULL, NULL);
+		$$ = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
 	}
 	| S_ID T_LB expression T_RB
 	{
-		$$ = create_node($1, FACTOR, $3, NULL, NULL, NULL, NULL);
+		$$ = create_node($1, FACTOR_9, $3, NULL, NULL, NULL, NULL);
 	}
 	| S_ID T_DOT S_ID
 	{
-        tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
-		$$ = create_node($1, FACTOR, tmp, NULL, NULL, NULL, NULL);
+        cst_tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+		$$ = create_node($1, FACTOR_10, tmp, NULL, NULL, NULL, NULL);
 	};
 
 args_list : args_list T_COMMA expression
@@ -676,14 +721,12 @@ args_list : args_list T_COMMA expression
 
 %%
 
-tree create_node(int ival, int case_id, tree t1, tree t2, tree t3, tree t4, tree t5) {
-    node* new_node = (node*)malloc(sizeof(node));
-    new_node->item = ival;
-    new_node->node_id = case_id;
-    new_node->first = t1;
-    new_node->second = t2;
-    new_node->third = t3;
-    new_node->fourth = t4;
-    new_node->fifth = t5;
-    return new_node;
+int main() {
+    yyin = stdin;
+    do {
+        yyparse();
+    } while (!feof(yyin));
+
+    return 0;
 }
+

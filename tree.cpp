@@ -173,7 +173,7 @@ GotoStm::GotoStm(int label) : Stm(label) {
     this->label = label;
 }
 
-MonocularExp::MonocularExp(int op_code, Exp *oprand) : Exp(N_MONOCULAR_EXP) {
+UnaryExp::UnaryExp(int op_code, Exp *oprand) {
     this->op_code = op_code;
     this->operand = oprand;
 }
@@ -212,19 +212,19 @@ std::string getString(Value *value) {
     if (value == nullptr) str = "NULL";
     else
         switch (value->base_type) {
-            case T_INTEGER: {
+            case TY_INTEGER: {
                 char val[10];
                 sprintf(val, "%d", value->val.integer_value);
                 str.append(val);
             }
                 break;
-            case T_REAL: {
+            case TY_REAL: {
                 char val[10];
                 sprintf(val, "%.2f", value->val.real_value);
                 str.append(val);
             }
                 break;
-            case T_CHAR: {
+            case TY_CHAR: {
                 str.append("\'");
                 char val[2];
                 sprintf(val, "%c", value->val.char_value);
@@ -232,13 +232,13 @@ std::string getString(Value *value) {
                 str.append("\'");
             }
                 break;
-            case T_BOOLEAN: {
+            case TY_BOOLEAN: {
                 str.append(value->val.boolean_value ? "true": "false");
             }
                 break;
-            case T_SET:
-            case T_ARRAY:
-            case T_RECORD: {
+            case TY_SET:
+            case TY_ARRAY:
+            case TY_RECORD: {
                 str.append("[");
                 for (auto child: value->val.children_value) {
                     str.append(getString(child));
@@ -543,8 +543,8 @@ std::string getString(Base *ori_node) {
                 str.append("\"}");
             }
                 break;
-            case N_MONOCULAR_EXP: {
-                auto *node = (MonocularExp *) ori_node;
+            case N_UNARY_EXP: {
+                auto *node = (UnaryExp *) ori_node;
                 str.append("{mon_op:\"");
                 str.append(getOpNameByID(node->op_code));
                 str.append("\",operand:");
@@ -562,27 +562,27 @@ std::string getString(Base *ori_node) {
             case N_TYPE: {
                 auto *node = (Type *) ori_node;
                 switch (node->base_type) {
-                    case T_INTEGER: {
+                    case TY_INTEGER: {
                         str.append("\"integer\"");
                     }
                         break;
-                    case T_REAL: {
+                    case TY_REAL: {
                         str.append("\"real\"");
                     }
                         break;
-                    case T_CHAR: {
+                    case TY_CHAR: {
                         str.append("\"char\"");
                     }
                         break;
-                    case T_BOOLEAN: {
+                    case TY_BOOLEAN: {
                         str.append("\"boolean\"");
                     }
                         break;
-                    case T_SET: {
+                    case TY_SET: {
                         str.append("\"set\"");
                     }
                         break;
-                    case T_ARRAY: {
+                    case TY_ARRAY: {
                         str.append("{type:\"array\",start_index:");
                         char num[100];
                         sprintf(num, "%d", node->array_start);
@@ -595,7 +595,7 @@ std::string getString(Base *ori_node) {
                         str.append("}");
                     }
                         break;
-                    case T_RECORD: {
+                    case TY_RECORD: {
                         str.append("{type:\"record\",child_type:[");
                         for (auto child: node->child_type) {
                             str.append("{name:\"");

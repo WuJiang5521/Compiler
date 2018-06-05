@@ -4,6 +4,7 @@
 
 #ifndef SPLCOMPILER_COMMON_H
 #define SPLCOMPILER_COMMON_H
+#include <string>
 
 #define INTEGER int
 #define REAL float
