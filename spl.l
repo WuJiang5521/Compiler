@@ -98,15 +98,16 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "char"      TOKEN(T_CHAR)
 "integer"   TOKEN(T_INTEGER)
 "real"      TOKEN(T_REAL)
+"str"       TOKEN(T_STR)
 
 {id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
 {char_const}        { yylval.iVal = installId(yytext, 2); return S_CHAR; }
-{string_const}      { yylval.iVal = installId(yytext, 0); return S_STRING; }
+{string_const}      { yylval.iVal = installId(yytext, 4); return S_STRING; }
 {integer}           { yylval.iVal = atoi(yytext); return S_INTEGER; }
 {real}              { yylval.iVal = installId(yytext, 1); return S_REAL; }
-{ws}            // do nothing
-{comment}       // do nothing
-.               printf("ERROR. Unexpected symbol found. %s %d\n", yytext, yytext[0]);
+{ws}                // do nothing
+{comment}           // do nothing
+.                   printf("ERROR. Unexpected symbol found. %s %d\n", yytext, yytext[0]);
 
 %%
 

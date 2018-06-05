@@ -103,6 +103,16 @@ public:
     explicit Exp(int type = 0);
 };
 
+class Body : public Base {
+public:
+    std::vector<Stm *> stms;
+
+    Body();
+
+    void addStm(Stm *);
+};
+
+
 class Program : public Base {
 public:
     std::string name;
@@ -133,15 +143,6 @@ public:
     void addVar(VarDef *);
 
     void addFunction(FunctionDef *);
-};
-
-class Body : public Base {
-public:
-    std::vector<Stm *> stms;
-
-    Body();
-
-    void addStm(Stm *);
 };
 
 class Situation : public Base {
