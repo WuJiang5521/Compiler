@@ -11,7 +11,7 @@
 #define BOOLEAN bool
 #define ADDRESS unsigned long
 
-// 双目：依次为 加 减 乘 除 整除 取余 与 或 非
+// 双目：依次为 加 减 乘 除 整除 取余 与 或 非 小于 大于 小于等于 大于等于 等于 不等于
 #define OP_ADD 0
 #define OP_MINUS 1
 #define OP_MULTI 2
@@ -21,6 +21,12 @@
 #define OP_AND 6
 #define OP_OR 7
 #define OP_NOT 8
+#define OP_SMALL 9
+#define OP_LARGE 10
+#define OP_SMALL_EQUAL 11
+#define OP_LARGE_EQUAL 12
+#define OP_EQUAL 13
+#define OP_NOT_EQUAL 14
 // 单目：依次为 取反 绝对值 前驱 后继 奇偶判定 转字符 转Ascii码
 #define OP_OPPO 20
 #define OP_ABS 21
@@ -50,6 +56,18 @@ std::string getOpNameByID(int id) {
             return "||";
         case OP_NOT:
             return "!";
+        case OP_SMALL:
+            return "<";
+        case OP_LARGE:
+            return ">";
+        case OP_SMALL_EQUAL:
+            return "<=";
+        case OP_LARGE_EQUAL:
+            return ">=";
+        case OP_EQUAL:
+            return "=";
+        case OP_NOT_EQUAL:
+            return "<>";
         case OP_OPPO:
             return "-";
         case OP_ABS:
