@@ -30,6 +30,13 @@ Define::Define() : Base(N_DEFINE) {
 }
 
 void Define::addLabel(LabelDef *def) {
+    bool is_defined = false;
+    for (auto label: label_def)
+        if (def->label_index == label->label_index) {
+            is_defined = true;
+            break;
+        }
+    if (is_defined) yyerror();
     label_def.push_back(def);
 }
 
