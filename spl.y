@@ -62,7 +62,7 @@ program : program_head routine T_DOT
     };
 
 program_head : T_PROGRAM S_ID T_SEMI
-    {
+   {
         $$ = create_node($2, PROGRAM_HEAD, NULL, NULL, NULL, NULL, NULL);
     }
     | T_PROGRAM S_ID T_LP program_head_para T_RP T_SEMI
@@ -85,7 +85,7 @@ routine : routine_head routine_body
 
 sub_routine : routine_head routine_body
     {
-        $$ = create_node(NOTHING, SUB_ROUTINE, $1, $2, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, ROUTINE, $1, $2, NULL, NULL, NULL);
     };
 
 routine_head : label_part const_part type_part var_part routine_part

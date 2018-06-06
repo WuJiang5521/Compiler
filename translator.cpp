@@ -152,7 +152,6 @@ Base* Translator::translate(cst_tree tree) {
                     define->addVar(varDef);
                     name_list_ptr = name_list_ptr->first;
                 } while (name_list_ptr != nullptr);
-
             }
 
             // ROUTINE_HEAD->ROUTINE_PART
@@ -220,7 +219,6 @@ Base* Translator::translate(cst_tree tree) {
                             } while (name_list_ptr != nullptr);
                         }
                     }
-                    Type* type = (Type*)translate(function_head_ptr->second);
                     if (function_head_ptr->second != nullptr) {
                         Type* type = (Type*)translate(function_head_ptr->second);
                         functionDef->setReturnType(type);
@@ -228,6 +226,13 @@ Base* Translator::translate(cst_tree tree) {
                     else {
                         // procedure, no return type
                     }
+                    // function body
+                    cst_tree sub_routine_ptr = function_decl_ptr->second;
+                    cst_tree routine_head_ptr = sub_routine_ptr->first;
+                    Define* func_define = (Define*)translate(routine_head_ptr);
+                    cst_tree stmt_list_ptr = sub_routine_ptr->second->first->first;
+                    functionDef->addDefine(func_define);
+                    functionDef->body = (Body*)translate(stmt_list_ptr);
 
                     define->addFunction(functionDef);
 
@@ -288,7 +293,7 @@ Base* Translator::translate(cst_tree tree) {
                             std::string name = lookup_string(name_list_ptr->item);
                             functionDef->addArgs(name, type, false);
                             name_list_ptr = name_list_ptr->first;
-                        } while (name_list_ptr!= nullptr);
+                        } while (name_list_ptr != nullptr);
                     }
                 }
                 if (function_head_ptr->second != nullptr) {
@@ -298,8 +303,17 @@ Base* Translator::translate(cst_tree tree) {
                 else {
                     // procedure, no return type
                 }
+                // function body
+                cst_tree sub_routine_ptr = function_decl_ptr->second;
+                cst_tree routine_head_ptr = sub_routine_ptr->first;
+                Define* func_define = (Define*)translate(routine_head_ptr);
+                cst_tree stmt_list_ptr = sub_routine_ptr->second->first->first;
+                functionDef->addDefine(func_define);
+                functionDef->body = (Body*)translate(stmt_list_ptr);
 
                 define->addFunction(functionDef);
+
+                routine_part_ptr = routine_part_ptr->first;
             }
             return (Base*)define;
         }
@@ -584,7 +598,7 @@ Base* Translator::translate(cst_tree tree) {
             cst_tree stmt_ptr = tree->second;
             whileStm->loop = (Body*)translate(stmt_ptr);
             body->addStm(whileStm);
-            
+
             return (Base*)body;
         }
 
@@ -603,6 +617,7 @@ Base* Translator::translate(cst_tree tree) {
                 step = -1;
             }
             ForStm* forStm = new ForStm(iter, start, end, step);
+            forStm->loop = (Body*)translate(tree->fourth);
             body->addStm(forStm);
             return (Base*)body;
         }
@@ -811,7 +826,7 @@ Base* Translator::translate(cst_tree tree) {
             Value* value = new Value;
             value->base_type = 0;
             value->val.integer_value = tree->item;
-            
+
             return new ConstantExp(value);
         }
 
@@ -836,8 +851,8 @@ Base* Translator::translate(cst_tree tree) {
             Value* value = new Value;
             value->base_type = 4;
 
-			value->val.string_value = new std::string;
-			*value->val.string_value = lookup_string(tree->item);
+            value->val.string_value = new std::string;
+            *value->val.string_value = lookup_string(tree->item);
             return new ConstantExp(value);
         }
 
