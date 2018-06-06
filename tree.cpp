@@ -49,6 +49,10 @@ void Define::addFunction(FunctionDef *def) {
     function_def.push_back(def);
 }
 
+void ExpList::addExp(Exp *exp) {
+    exps.push_back(exp);
+}
+
 Body::Body() : Base(N_BODY) {
     stms.clear();
 }
@@ -111,7 +115,7 @@ void FunctionDef::addDefine(Define *def) {
     if (define == nullptr) define = def;
 }
 
-AssignStm::AssignStm(const std::string &left, Exp *right) : Stm(N_ASSIGN_STM) {
+AssignStm::AssignStm(Exp *left, Exp *right) : Stm(N_ASSIGN_STM) {
     this->left_value = left;
     this->right_value = right;
 }
@@ -133,7 +137,7 @@ LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     this->label = label;
 }
 
-IfStm::IfStm() : Stm(N_IF_STM) {}
+//IfStm::IfStm() : Stm(N_IF_STM) {}
 
 void IfStm::setCondition(Exp *cond) {
     condition = cond;
@@ -163,7 +167,7 @@ WhileStm::WhileStm(Exp *cond) : Stm(N_WHILE_STM) {
     condition = cond;
 }
 
-RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
+//RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
 
 void RepeatStm::setCondition(Exp *cond) {
     if (condition == nullptr) condition = cond;
@@ -240,7 +244,7 @@ std::string getString(Value *value) {
             case TY_ARRAY:
             case TY_RECORD: {
                 str.append("[");
-                for (auto child: value->val.children_value) {
+                for (auto child: *value->val.children_value) {
                     str.append(getString(child));
                     str.append(",");
                 }
@@ -401,7 +405,8 @@ std::string getString(Base *ori_node) {
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
                 str.append("{left:\"");
-                str.append(node->left_value);
+                // TODO only support a=1
+                //str.append(node->left_value);
                 str.append("\",right:");
                 str.append(getString(node->right_value));
                 str.append("}");
@@ -607,10 +612,12 @@ std::string getString(Base *ori_node) {
                         }
                     }
                         break;
+                    /*
                     default: {
                         if (node->base_type < type_list.size()) str.append(type_list[node->base_type]->name);
                         else str.append("\"There is something wrong. The type cannot be recognised.\"");
                     }
+                    */
                 }
             }
                 break;

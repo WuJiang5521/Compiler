@@ -57,6 +57,7 @@ program : program_head routine T_DOT
     {
         cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
         Base* ast_root = Translator::translate(root);
+        //printTree("log", ast_root);
         $$ = root;
     };
 
@@ -454,33 +455,33 @@ non_label_stmt : assign_stmt
 
 assign_stmt : S_ID T_ASSIGN expression      // id = 3
     {
-        $$ = create_node($1, ASSIGN_STMT, $3, NULL, NULL, NULL, NULL);
+        $$ = create_node($1, ASSIGN_STMT_1, $3, NULL, NULL, NULL, NULL);
     }
 	| S_ID T_LB expression T_RB T_ASSIGN expression     // id[3] = 4
     {
-        $$ = create_node($1, ASSIGN_STMT, $3, $6, NULL, NULL, NULL);
+        $$ = create_node($1, ASSIGN_STMT_2, $3, $6, NULL, NULL, NULL);
     }
 	| S_ID T_DOT S_ID T_ASSIGN expression       // id.key = 10
     {
         cst_tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
-        $$ = create_node($1, ASSIGN_STMT, tmp, $5, NULL, NULL, NULL);
+        $$ = create_node($1, ASSIGN_STMT_3, tmp, $5, NULL, NULL, NULL);
     };
 
 proc_stmt : S_ID
 	{
-        $$ = create_node($1, PROC_STMT, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node($1, PROC_STMT_1, NULL, NULL, NULL, NULL, NULL);
 	}
 	| S_ID T_LP args_list T_RP
     {
-        $$ = create_node($1, PROC_STMT, $3, NULL, NULL, NULL, NULL);
+        $$ = create_node($1, PROC_STMT_2, $3, NULL, NULL, NULL, NULL);
     }
 	| sys_proc T_LP expression_list T_RP
     {
-        $$ = create_node(NOTHING, PROC_STMT, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PROC_STMT_3, $1, $3, NULL, NULL, NULL);
     }
 	| sys_proc T_LP factor T_RP
     {
-        $$ = create_node(NOTHING, PROC_STMT, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, PROC_STMT_4, $1, $3, NULL, NULL, NULL);
     };
 
 sys_proc : T_WRITE
@@ -573,27 +574,27 @@ expression_list : expression_list T_COMMA expression
 
 expression : expression T_GE expr
 	{
-		$$ = create_node(T_GE, EXPRESSION_GE, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GE, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_GT expr
 	{
-		$$ = create_node(T_GT, EXPRESSION_GT, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_GT, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LE expr
 	{
-		$$ = create_node(T_LE, EXPRESSION_LE, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LE, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_LT expr
 	{
-		$$ = create_node(T_LT, EXPRESSION_LT, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_LT, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_EQUAL expr
 	{
-		$$ = create_node(T_EQUAL, EXPRESSION_EQ, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_EQUAL, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expression T_NE expr
 	{
-		$$ = create_node(T_NE, EXPRESSION_NE, $1, $3, NULL, NULL, NULL);
+		$$ = create_node(T_NE, EXPRESSION, $1, $3, NULL, NULL, NULL);
 	}
 	| expr
 	{

@@ -28,6 +28,8 @@
 #define OP_LARGE_EQUAL 12
 #define OP_EQUAL 13
 #define OP_NOT_EQUAL 14
+#define OP_DOT 15
+#define OP_INDEX 16
 // 单目：依次为 取反 绝对值 前驱 后继 奇偶判定 转字符 转Ascii码
 #define OP_OPPO 20
 #define OP_ABS 21
@@ -37,53 +39,6 @@
 #define OP_CHR 25
 #define OP_ORD 26
 
-std::string getOpNameByID(int id) {
-    switch (id) {
-        case OP_ADD:
-            return "+";
-        case OP_MINUS:
-            return "-";
-        case OP_MULTI:
-            return "*";
-        case OP_RDIV:
-            return "/";
-        case OP_DDIV:
-            return "//";
-        case OP_MOD:
-            return "%";
-        case OP_AND:
-            return "&&";
-        case OP_OR:
-            return "||";
-        case OP_NOT:
-            return "!";
-        case OP_SMALL:
-            return "<";
-        case OP_LARGE:
-            return ">";
-        case OP_SMALL_EQUAL:
-            return "<=";
-        case OP_LARGE_EQUAL:
-            return ">=";
-        case OP_EQUAL:
-            return "=";
-        case OP_NOT_EQUAL:
-            return "<>";
-        case OP_OPPO:
-            return "-";
-        case OP_ABS:
-            return "abs";
-        case OP_PRED:
-            return "pred";
-        case OP_SUCC:
-            return "succ";
-        case OP_ODD:
-            return "odd";
-        case OP_CHR:
-            return "chr";
-        case OP_ORD:
-            return "ord";
-    }
-}
+std::string getOpNameByID(int id);
 
 #endif //SPLCOMPILER_COMMON_H

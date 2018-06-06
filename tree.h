@@ -82,6 +82,7 @@ class MemoryExp;
 // type
 class Type;
 
+
 // define
 class Base {
 public:
@@ -112,6 +113,11 @@ public:
     void addStm(Stm *);
 };
 
+class ExpList : public Base {
+public:
+    std::vector<Exp *> exps;
+    void addExp(Exp*);
+};
 
 class Program : public Base {
 public:
@@ -210,10 +216,10 @@ public:
 
 class AssignStm : public Stm {
 public:
-    std::string left_value;
+    Exp *left_value;
     Exp *right_value;
 
-    AssignStm(const std::string &, Exp *);
+    AssignStm(Exp*, Exp *);
 };
 
 class WithStm : public Stm {
@@ -367,6 +373,6 @@ void addType(Type *type);
 // example: Type *type = findType("arr");
 Type *findType(std::string type_name);
 
-extern std::vector<Type *> type_list;
+//extern std::vector<Type *> type_list;
 
 #endif //SPLCOMPILER_TREE_H
