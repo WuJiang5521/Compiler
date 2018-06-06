@@ -98,7 +98,7 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "char"      TOKEN(T_CHAR)
 "integer"   TOKEN(T_INTEGER)
 "real"      TOKEN(T_REAL)
-"str"       TOKEN(T_STR)
+"string"    TOKEN(T_STRING)
 
 {id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
 {char_const}        { yylval.iVal = installId(yytext, 2); return S_CHAR; }

@@ -136,7 +136,7 @@ Base* Translator::translate(cst_tree tree) {
 
                         define->addVar(varDef);
                         name_list_ptr = name_list_ptr->first;
-                    } while (name_list_ptr->first != nullptr);
+                    } while (name_list_ptr != nullptr);
 
                     var_decl_list_ptr = var_decl_list_ptr->first;
                 }
@@ -176,15 +176,14 @@ Base* Translator::translate(cst_tree tree) {
                             cst_tree para_type_list_ptr = para_decl_list_ptr->second;
                             cst_tree simple_type_decl_ptr = para_type_list_ptr->second;
                             Type* type = (Type*)translate(simple_type_decl_ptr);
-                            // TODO true / false maybe inverted!!
                             if (para_type_list_ptr->node_id == PARA_TYPE_LIST_1) {
                                 cst_tree var_para_list_ptr = para_type_list_ptr->first;
                                 cst_tree name_list_ptr = var_para_list_ptr->first;
                                 do {
                                     std::string name = lookup_string(name_list_ptr->item);
-                                    functionDef->addArgs(name, type, false);
+                                    functionDef->addArgs(name, type, true);
                                     name_list_ptr = name_list_ptr->first;
-                                } while (name_list_ptr->first != nullptr);
+                                } while (name_list_ptr != nullptr);
 
                             }
                             else if (para_type_list_ptr->node_id == PARA_TYPE_LIST_2) {
@@ -192,24 +191,23 @@ Base* Translator::translate(cst_tree tree) {
                                 cst_tree name_list_ptr = val_para_list_ptr->first;
                                 do {
                                     std::string name = lookup_string(name_list_ptr->item);
-                                    functionDef->addArgs(name, type, true);
+                                    functionDef->addArgs(name, type, false);
                                     name_list_ptr = name_list_ptr->first;
-                                } while (name_list_ptr->first != nullptr);
+                                } while (name_list_ptr != nullptr);
                             }
                             para_decl_list_ptr = para_decl_list_ptr->first;
                         }
                         cst_tree para_type_list_ptr = para_decl_list_ptr->first;
                         cst_tree simple_type_decl_ptr = para_type_list_ptr->second;
                         Type* type = (Type*)translate(simple_type_decl_ptr);
-                        // TODO true / false maybe inverted!!
                         if (para_type_list_ptr->node_id == PARA_TYPE_LIST_1) {
                             cst_tree var_para_list_ptr = para_type_list_ptr->first;
                             cst_tree name_list_ptr = var_para_list_ptr->first;
                             do {
                                 std::string name = lookup_string(name_list_ptr->item);
-                                functionDef->addArgs(name, type, false);
+                                functionDef->addArgs(name, type, true);
                                 name_list_ptr = name_list_ptr->first;
-                            } while (name_list_ptr->first != nullptr);
+                            } while (name_list_ptr != nullptr);
 
                         }
                         else if (para_type_list_ptr->node_id == PARA_TYPE_LIST_2) {
@@ -217,13 +215,19 @@ Base* Translator::translate(cst_tree tree) {
                             cst_tree name_list_ptr = val_para_list_ptr->first;
                             do {
                                 std::string name = lookup_string(name_list_ptr->item);
-                                functionDef->addArgs(name, type, true);
+                                functionDef->addArgs(name, type, false);
                                 name_list_ptr = name_list_ptr->first;
-                            } while (name_list_ptr->first != nullptr);
+                            } while (name_list_ptr != nullptr);
                         }
                     }
                     Type* type = (Type*)translate(function_head_ptr->second);
-                    functionDef->setReturnType(type);
+                    if (function_head_ptr->second != nullptr) {
+                        Type* type = (Type*)translate(function_head_ptr->second);
+                        functionDef->setReturnType(type);
+                    }
+                    else {
+                        // procedure, no return type
+                    }
 
                     define->addFunction(functionDef);
 
@@ -243,13 +247,12 @@ Base* Translator::translate(cst_tree tree) {
                         cst_tree para_type_list_ptr = para_decl_list_ptr->second;
                         cst_tree simple_type_decl_ptr = para_type_list_ptr->second;
                         Type* type = (Type*)translate(simple_type_decl_ptr);
-                        // TODO true / false maybe inverted!!
                         if (para_type_list_ptr->node_id == PARA_TYPE_LIST_1) {
                             cst_tree var_para_list_ptr = para_type_list_ptr->first;
                             cst_tree name_list_ptr = var_para_list_ptr->first;
                             do {
                                 std::string name = lookup_string(name_list_ptr->item);
-                                functionDef->addArgs(name, type, false);
+                                functionDef->addArgs(name, type, true);
                                 name_list_ptr = name_list_ptr->first;
                             } while (name_list_ptr != nullptr);
 
@@ -259,7 +262,7 @@ Base* Translator::translate(cst_tree tree) {
                             cst_tree name_list_ptr = val_para_list_ptr->first;
                             do {
                                 std::string name = lookup_string(name_list_ptr->item);
-                                functionDef->addArgs(name, type, true);
+                                functionDef->addArgs(name, type, false);
                                 name_list_ptr = name_list_ptr->first;
                             } while (name_list_ptr != nullptr);
                         }
@@ -268,13 +271,12 @@ Base* Translator::translate(cst_tree tree) {
                     cst_tree para_type_list_ptr = para_decl_list_ptr->first;
                     cst_tree simple_type_decl_ptr = para_type_list_ptr->second;
                     Type* type = (Type*)translate(simple_type_decl_ptr);
-                    // TODO true / false maybe inverted!!
                     if (para_type_list_ptr->node_id == PARA_TYPE_LIST_1) {
                         cst_tree var_para_list_ptr = para_type_list_ptr->first;
                         cst_tree name_list_ptr = var_para_list_ptr->first;
                         do {
                             std::string name = lookup_string(name_list_ptr->item);
-                            functionDef->addArgs(name, type, false);
+                            functionDef->addArgs(name, type, true);
                             name_list_ptr = name_list_ptr->first;
                         } while (name_list_ptr != nullptr);
 
@@ -284,13 +286,18 @@ Base* Translator::translate(cst_tree tree) {
                         cst_tree name_list_ptr = val_para_list_ptr->first;
                         do {
                             std::string name = lookup_string(name_list_ptr->item);
-                            functionDef->addArgs(name, type, true);
+                            functionDef->addArgs(name, type, false);
                             name_list_ptr = name_list_ptr->first;
                         } while (name_list_ptr!= nullptr);
                     }
                 }
-                Type* type = (Type*)translate(function_head_ptr->second);
-                functionDef->setReturnType(type);
+                if (function_head_ptr->second != nullptr) {
+                    Type* type = (Type*)translate(function_head_ptr->second);
+                    functionDef->setReturnType(type);
+                }
+                else {
+                    // procedure, no return type
+                }
 
                 define->addFunction(functionDef);
             }
