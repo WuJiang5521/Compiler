@@ -84,6 +84,7 @@ class MemoryExp;
 // type
 class Type;
 
+
 // define
 class Base {
 public:
@@ -104,6 +105,21 @@ public:
     Type *return_type;
 
     explicit Exp(int type = 0);
+};
+
+class Body : public Base {
+public:
+    std::vector<Stm *> stms;
+
+    Body();
+
+    void addStm(Stm *);
+};
+
+class ExpList : public Base {
+public:
+    std::vector<Exp *> exps;
+    void addExp(Exp*);
 };
 
 class Program : public Base {
@@ -136,15 +152,6 @@ public:
     void addVar(VarDef *);
 
     void addFunction(FunctionDef *);
-};
-
-class Body : public Base {
-public:
-    std::vector<Stm *> stms;
-
-    Body();
-
-    void addStm(Stm *);
 };
 
 class Situation : public Base {
@@ -209,13 +216,13 @@ public:
 
 class AssignStm : public Stm {
 public:
-    std::string left_value;
+    Exp *left_value;
     Exp *right_value;
 
-    AssignStm(const std::string &, Exp *);
-    // 这里左值是一个字符串，需要到symtab里找到对应的变量，然后进行类型匹配。但我这里没有建表，所以判断不了。
-    // 需要判断左值是否是常量
+    AssignStm(Exp*, Exp *);
+    // 需要判断左值是否是常量,const a = 1; a = 2;是不允许的。
     // 匹配函数我在tree.cpp里写好了 canFillTypeWithValue()，你看能不能用上。
+
 };
 
 class WithStm : public Stm {
@@ -397,6 +404,6 @@ void addType(Type *type);
 // example: Type *type = findType("arr");
 Type *findType(std::string type_name);
 
-extern std::vector<Type *> type_list;
+//extern std::vector<Type *> type_list;
 
 #endif //SPLCOMPILER_TREE_H

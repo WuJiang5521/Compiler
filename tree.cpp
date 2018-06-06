@@ -5,6 +5,14 @@
 #include "tree.h"
 #include <fstream>
 
+// 在每个frame里 可使用的变量、常量、函数、类型是会变化的，这个type_list会随着程序的进行而变化，所以需要重新维护。这里
+// 只提供了最简单的初始化。
+std::vector<Type *> type_list;
+void initialize() {
+    for (int i = 0; i < TY_CUSTOM; i++)
+        type_list.push_back(new Type(i));
+}
+
 void yyerror(const char *info) {
     printf("%s\n", info);
 }
@@ -19,15 +27,15 @@ bool canFillTypeWithValue(Type *type, Value *value) {
             return value->base_type == TY_CHAR || value->base_type == TY_STRING;
         case TY_ARRAY:
             if (value->base_type != TY_ARRAY) return false;
-            if (type->array_end - type->array_start + 1 != value->val->children_value.size()) return false;
+            if (type->array_end - type->array_start + 1 != (*(value->val.children_value)).size()) return false;
             for (int i = 0; i <= type->array_end - type->array_start; i++)
-                if (!canFillTypeWithValue(type->child_type[i], value->val->children_value[i])) return false;
+                if (!canFillTypeWithValue(type->child_type[i], (*(value->val.children_value))[i])) return false;
             return true;
         case TY_RECORD:
             if (value->base_type != TY_RECORD) return false;
-            if (type->child_type.size() != value->val->children_value.size()) return false;
+            if (type->child_type.size() != (*(value->val.children_value)).size()) return false;
             for (int i = 0; i < type->child_type.size(); i++)
-                if (!canFillTypeWithValue(type->child_type[0], value->val->children_value[i])) return false;
+                if (!canFillTypeWithValue(type->child_type[0], (*(value->val.children_value))[i])) return false;
             return true;
         default:
             if (type->base_type == TY_SET || type->base_type >= type_list.size()) return false;
@@ -85,14 +93,14 @@ Type *generateTypeByValue(Value *value) {
             break;
         case TY_SET: case TY_RECORD:
             type = new Type(value->base_type);
-            for (auto val: value->val->children_value)
+            for (auto val: (*(value->val.children_value)))
                 type->child_type.push_back(generateTypeByValue(val));
             break;
         case TY_ARRAY:
             type = new Type(TY_ARRAY);
             type->array_start = 0;
-            type->array_end = value->val->children_value.size() - 1;
-            type->child_type.push_back(generateTypeByValue(value->val->children_value[0]));
+            type->array_end = (*(value->val.children_value)).size() - 1;
+            type->child_type.push_back(generateTypeByValue((*(value->val.children_value))[0]));
             break;
         default:
             type = nullptr;
@@ -145,6 +153,7 @@ Exp::Exp(int type) : Base(type) {}
 
 Program::Program(const std::string &name) : Base(N_PROGRAM) {
     this->name = name;
+    initialize();
 }
 
 void Program::addDefine(Define *define) {
@@ -306,6 +315,10 @@ void Define::addFunction(FunctionDef *def) {
     } else function_def.push_back(def);
 }
 
+void ExpList::addExp(Exp *exp) {
+    exps.push_back(exp);
+}
+
 Body::Body() : Base(N_BODY) {
     stms.clear();
 }
@@ -375,7 +388,7 @@ void FunctionDef::addDefine(Define *def) {
     // define 和 arguments 重复性判定，暂时不管
 }
 
-AssignStm::AssignStm(const std::string &left, Exp *right) : Stm(N_ASSIGN_STM) {
+AssignStm::AssignStm(Exp *left, Exp *right) : Stm(N_ASSIGN_STM) {
     this->left_value = left;
     this->right_value = right;
 }
@@ -399,7 +412,7 @@ LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     // 重复性检测，避免跳转时出现多个目的地，暂时不管
 }
 
-IfStm::IfStm() : Stm(N_IF_STM) {}
+//IfStm::IfStm() : Stm(N_IF_STM) {}
 
 void IfStm::setCondition(Exp *cond) {
     condition = cond;
@@ -462,7 +475,7 @@ void CaseStm::check() {
     for (bool &i : flag) i = false;
     for (auto situation: situations)
         for (Exp* match_item: situation->match_list) {
-            int id = is_int ? (match_item->return_value->val->integer_value + 32768) : ((int)match_item->return_value->val->char_value);
+            int id = is_int ? (match_item->return_value->val.integer_value + 32768) : ((int)match_item->return_value->val.char_value);
             if (flag[id]) {
                 char info[200];
                 sprintf(info, "The match items in case statement must be different.");
@@ -920,33 +933,33 @@ std::string getString(Value *value) {
         switch (value->base_type) {
             case TY_INTEGER: {
                 char val[10];
-                sprintf(val, "%d", value->val->integer_value);
+                sprintf(val, "%d", value->val.integer_value);
                 str.append(val);
             }
                 break;
             case TY_REAL: {
                 char val[10];
-                sprintf(val, "%.2f", value->val->real_value);
+                sprintf(val, "%.2f", value->val.real_value);
                 str.append(val);
             }
                 break;
             case TY_CHAR: {
                 str.append("\'");
                 char val[2];
-                sprintf(val, "%c", value->val->char_value);
+                sprintf(val, "%c", value->val.char_value);
                 str.append(val);
                 str.append("\'");
             }
                 break;
             case TY_BOOLEAN: {
-                str.append(value->val->boolean_value ? "true" : "false");
+                str.append(value->val.boolean_value ? "true" : "false");
             }
                 break;
             case TY_SET:
             case TY_ARRAY:
             case TY_RECORD: {
                 str.append("[");
-                for (auto child: value->val->children_value) {
+                for (auto child: *value->val.children_value) {
                     str.append(getString(child));
                     str.append(",");
                 }
@@ -1103,7 +1116,8 @@ std::string getString(Base *ori_node) {
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
                 str.append("{left:\"");
-                str.append(node->left_value);
+                // TODO only support a=1
+                //str.append(node->left_value);
                 str.append("\",right:");
                 str.append(getString(node->right_value));
                 str.append("}");
@@ -1278,6 +1292,10 @@ std::string getString(Base *ori_node) {
                         break;
                     case TY_BOOLEAN: {
                         str.append("\"boolean\"");
+                    }
+                        break;
+                    case TY_STRING: {
+                        str.append("\"string\"");
                     }
                         break;
                     case TY_SET: {

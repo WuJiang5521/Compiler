@@ -6,9 +6,10 @@
  */
 
 /* NOTE:
- * - All stmt will return Body
+ * - Most stmt will return Body
  */
 
+#include <cstddef>
 #include "translator.h"
 #include "spl.tab.h"
 #include "cst.h"
@@ -50,6 +51,7 @@ Base* Translator::translate(cst_tree tree) {
             program->define = define;
             cst_tree stmt_list_ptr = tree->second->second->first->first;
             Body* body = (Body*)translate(stmt_list_ptr);
+            program->body = body;
             return (Base*)program;
         }
 
@@ -82,17 +84,17 @@ Base* Translator::translate(cst_tree tree) {
             else {
                 while (const_expr_list_ptr->second != nullptr) {
                     std::string name = lookup_string(const_expr_list_ptr->item);
-                    Exp* value = (Exp*)translate(const_expr_list_ptr->second);
+                    ConstantExp* value = (ConstantExp*)translate(const_expr_list_ptr->second);
                     ConstDef* constDef = new ConstDef(name, value);
                     define->addConst(constDef);
-                    set_type(const_expr_list_ptr->item, value->return_type->base_type);
+                    set_type(const_expr_list_ptr->item, value->value->base_type);
                     const_expr_list_ptr = const_expr_list_ptr->first;
                 }
                 std::string name = lookup_string(const_expr_list_ptr->item);
-                Exp* value = (Exp*)translate(const_expr_list_ptr->first);
+                ConstantExp* value = (ConstantExp*)translate(const_expr_list_ptr->first);
                 ConstDef* constDef = new ConstDef(name, value);
                 define->addConst(constDef);
-                set_type(const_expr_list_ptr->item, value->return_type->base_type);
+                set_type(const_expr_list_ptr->item, value->value->base_type);
             }
 
             // ROUTINE_HEAD->TYPE_PART
@@ -118,7 +120,7 @@ Base* Translator::translate(cst_tree tree) {
 
             // ROUTINE_HEAD->VAR_PART
             cst_tree var_decl_list_ptr = tree->fourth->first;
-            if (var_decl_list_ptr != nullptr) {
+            if (var_decl_list_ptr == nullptr) {
                 // no var definition
             }
             else {
@@ -149,7 +151,7 @@ Base* Translator::translate(cst_tree tree) {
 
                     define->addVar(varDef);
                     name_list_ptr = name_list_ptr->first;
-                } while (name_list_ptr->first != nullptr);
+                } while (name_list_ptr != nullptr);
 
             }
 
@@ -249,7 +251,7 @@ Base* Translator::translate(cst_tree tree) {
                                 std::string name = lookup_string(name_list_ptr->item);
                                 functionDef->addArgs(name, type, false);
                                 name_list_ptr = name_list_ptr->first;
-                            } while (name_list_ptr->first != nullptr);
+                            } while (name_list_ptr != nullptr);
 
                         }
                         else if (para_type_list_ptr->node_id == PARA_TYPE_LIST_2) {
@@ -259,7 +261,7 @@ Base* Translator::translate(cst_tree tree) {
                                 std::string name = lookup_string(name_list_ptr->item);
                                 functionDef->addArgs(name, type, true);
                                 name_list_ptr = name_list_ptr->first;
-                            } while (name_list_ptr->first != nullptr);
+                            } while (name_list_ptr != nullptr);
                         }
                         para_decl_list_ptr = para_decl_list_ptr->first;
                     }
@@ -274,7 +276,7 @@ Base* Translator::translate(cst_tree tree) {
                             std::string name = lookup_string(name_list_ptr->item);
                             functionDef->addArgs(name, type, false);
                             name_list_ptr = name_list_ptr->first;
-                        } while (name_list_ptr->first != nullptr);
+                        } while (name_list_ptr != nullptr);
 
                     }
                     else if (para_type_list_ptr->node_id == PARA_TYPE_LIST_2) {
@@ -284,7 +286,7 @@ Base* Translator::translate(cst_tree tree) {
                             std::string name = lookup_string(name_list_ptr->item);
                             functionDef->addArgs(name, type, true);
                             name_list_ptr = name_list_ptr->first;
-                        } while (name_list_ptr->first != nullptr);
+                        } while (name_list_ptr!= nullptr);
                     }
                 }
                 Type* type = (Type*)translate(function_head_ptr->second);
@@ -405,20 +407,115 @@ Base* Translator::translate(cst_tree tree) {
             return (Base*)body;
         }
 
-        case ASSIGN_STMT:
+        case ASSIGN_STMT_1:
         {
-            // TODO only support a=3, doesn't support a[10]=3, a.b=1
+            // example: a = 3
             Body* body = new Body();
             std::string name = lookup_string(tree->item);
+            Exp* left_value = new VariableExp(name);
             Exp* right_value = (Exp*)translate(tree->first);
-            AssignStm* assignStm = new AssignStm(name, right_value);
+            AssignStm* assignStm = new AssignStm(left_value, right_value);
             body->addStm(assignStm);
             return (Base*)body;
         }
 
-        case PROC_STMT:
+        case ASSIGN_STMT_2:
         {
-            // TODO
+            // example: a[1] = 3
+            Body* body = new Body();
+            std::string name = lookup_string(tree->item);
+            Exp* left_value_1 = new VariableExp(name);
+            Exp* left_value_2 = (Exp*)translate(tree->first);
+            BinaryExp* left_value = new BinaryExp(OP_INDEX, left_value_1, left_value_2);
+            Exp* right_value = (Exp*)translate(tree->second);
+            AssignStm* assignStm = new AssignStm(left_value, right_value);
+            body->addStm(assignStm);
+            return (Base*)body;
+        }
+
+        case ASSIGN_STMT_3:
+        {
+            // example: a.b = 3
+            Body* body = new Body();
+            std::string name_1 = lookup_string(tree->item);
+            Exp* left_value_1 = new VariableExp(name_1);
+            std::string name_2 = lookup_string(tree->first->item);
+            Exp* left_value_2 = new VariableExp(name_2);
+            BinaryExp* left_value = new BinaryExp(OP_DOT, left_value_1, left_value_2);
+
+            Exp* right_value = (Exp*)translate(tree->second);
+
+            AssignStm* assignStm = new AssignStm(left_value, right_value);
+            body->addStm(assignStm);
+            return (Base*)body;
+        }
+
+        case PROC_STMT_1:
+        {
+            Body* body = new Body();
+            std::string name = lookup_string(tree->item);
+            CallStm* callStm = new CallStm(name);
+            body->addStm(callStm);
+            return (Base*)body;
+        }
+
+        case PROC_STMT_2:
+        {
+            Body* body = new Body();
+            std::string name = lookup_string(tree->item);
+            CallStm* callStm = new CallStm(name);
+            ExpList* expList = (ExpList*)translate(tree->first);
+
+            for(std::vector<Exp*>::iterator it = expList->exps.begin(); it != expList->exps.end(); it++) {
+                callStm->addArgs(*it);
+            }
+
+            body->addStm(callStm);
+            return (Base*)body;
+        }
+
+        case PROC_STMT_3:
+        {
+            Body* body = new Body();
+            CallStm* callStm = (CallStm*)translate(tree->first);
+            ExpList* expList = (ExpList*)translate(tree->second);
+
+            for(std::vector<Exp*>::iterator it = expList->exps.begin(); it != expList->exps.end(); it++) {
+                callStm->addArgs(*it);
+            }
+
+            body->addStm(callStm);
+
+            return (Base*)body;
+        }
+
+        case PROC_STMT_4:
+        {
+            Body* body = new Body();
+            CallStm* callStm = (CallStm*)translate(tree->first);
+            Exp* exp = (Exp*)translate(tree->second);
+            callStm->addArgs(exp);
+
+            body->addStm(callStm);
+
+            return (Base*)body;
+        }
+
+        case SYS_PROC:
+        {
+            CallStm* callStm = nullptr;
+            switch (tree->item) {
+                case T_WRITE:
+                    callStm = new CallStm("write");
+                    break;
+                case T_WRITELN:
+                    callStm = new CallStm("writeln");
+                    break;
+                case T_READ:
+                    callStm = new CallStm("read");
+                    break;
+            }
+            return callStm;
         }
 
         case COMPOUND_STMT:
@@ -645,12 +742,18 @@ Base* Translator::translate(cst_tree tree) {
 
         case FACTOR_3:
         {
-            // TODO
+            CallExp* callExp = (CallExp*)translate(tree->first);
+            return (Base*)callExp;
         }
 
         case FACTOR_4:
         {
-            // TODO
+            CallExp* callExp = (CallExp*)translate(tree->first);
+            ExpList* expList = (ExpList*)translate(tree->second);
+            for(std::vector<Exp*>::iterator it = expList->exps.begin(); it != expList->exps.end(); it++) {
+                callExp->addArgs(*it);
+            }
+            return (Base*)callExp;
         }
 
         case FACTOR_5:
@@ -679,25 +782,35 @@ Base* Translator::translate(cst_tree tree) {
 
         case FACTOR_9:
         {
-            // TODO
+            std::string name = lookup_string(tree->item);
+            CallExp* callExp = new CallExp(name);
+            Exp* exp = (Exp*)translate(tree->first);
+            callExp->addArgs(exp);
+            return (Base*)callExp;
         }
 
         case FACTOR_10:
         {
-            // TODO
+            std::string name_1 = lookup_string(tree->item);
+            VariableExp* variableExp_1 = new VariableExp(name_1);
+            std::string name_2 = lookup_string(tree->first->item);
+            VariableExp* variableExp_2 = new VariableExp(name_2);
+            BinaryExp* binaryExp = new BinaryExp(T_DOT, variableExp_1, variableExp_2);
+            return (Base*)binaryExp;
         }
 
         case CONST_VALUE_INT:
         {
-            Value* value = new Value();
+            Value* value = new Value;
             value->base_type = 0;
             value->val.integer_value = tree->item;
+            
             return new ConstantExp(value);
         }
 
         case CONST_VALUE_REAL:
         {
-            Value* value = new Value();
+            Value* value = new Value;
             value->base_type = 1;
             value->val.real_value = lookup_float(tree->item);
             return new ConstantExp(value);
@@ -705,19 +818,134 @@ Base* Translator::translate(cst_tree tree) {
 
         case CONST_VALUE_CHAR:
         {
-            Value* value = new Value();
+            Value* value = new Value;
             value->base_type = 2;
             value->val.char_value = lookup_string(tree->item).c_str()[0];
             return new ConstantExp(value);
         }
 
-        case CONST_VALUE_BOOLEAN:
+        case CONST_VALUE_STR:
         {
-            Value* value = new Value();
+            Value* value = new Value;
             value->base_type = 4;
-            // TODO
+
+			value->val.string_value = new std::string;
+			*value->val.string_value = lookup_string(tree->item);
             return new ConstantExp(value);
         }
+
+        case CONST_VALUE:
+        {
+            Value* value = new Value;
+            switch (tree->item) {
+                case T_TRUE:
+                    value->val.boolean_value = true;
+                    value->base_type = 3;
+                    break;
+                case T_FALSE:
+                    value->val.boolean_value = false;
+                    value->base_type = 3;
+                    break;
+                case T_MAXINT:
+                    value->val.integer_value = 32767;
+                    value->base_type = 0;
+                    break;
+            }
+        }
+
+        case EXPRESSION_LIST:
+        {
+            ExpList* expList = new ExpList();
+            cst_tree expression_list_ptr = tree;
+            while (expression_list_ptr->second != nullptr) {
+                Exp* exp = (Exp*)translate(expression_list_ptr->second);
+                expList->addExp(exp);
+                expression_list_ptr = expression_list_ptr->first;
+            }
+            Exp* exp = (Exp*)translate(expression_list_ptr->first);
+            expList->addExp(exp);
+        }
+
+        case EXPRESSION:
+        {
+            if (tree->item != NOTHING) {
+                Exp* exp_1 = (Exp*)translate(tree->first);
+                Exp* exp_2 = (Exp*)translate(tree->second);
+                BinaryExp* binaryExp = nullptr;
+                switch (tree->item) {
+                    case T_GE:
+                        binaryExp = new BinaryExp(T_GE, exp_1, exp_2);
+                        break;
+                    case T_GT:
+                        binaryExp = new BinaryExp(T_GT, exp_1, exp_2);
+                        break;
+                    case T_LE:
+                        binaryExp = new BinaryExp(T_LE, exp_1, exp_2);
+                        break;
+                    case T_LT:
+                        binaryExp = new BinaryExp(T_LT, exp_1, exp_2);
+                        break;
+                    case T_EQUAL:
+                        binaryExp = new BinaryExp(T_EQUAL, exp_1, exp_2);
+                        break;
+                    case T_NE:
+                        binaryExp = new BinaryExp(T_NE, exp_1, exp_2);
+                        break;
+                }
+                return binaryExp;
+            }
+            else {
+                Exp* exp = (Exp*)translate(tree->first);
+                return exp;
+            }
+        }
+
+        case ARGS_LIST:
+        {
+            ExpList* expList = new ExpList();
+            cst_tree args_list_ptr = tree;
+            while (args_list_ptr->second != nullptr) {
+                Exp* exp = (Exp*)translate(args_list_ptr->second);
+                expList->addExp(exp);
+                args_list_ptr = args_list_ptr->first;
+            }
+            Exp* exp = (Exp*)translate(args_list_ptr->first);
+            expList->addExp(exp);
+            return expList;
+        }
+
+        case SYS_FUNCT:
+        {
+            CallExp* callExp = nullptr;
+            switch (tree->item) {
+                case T_ABS:
+                    callExp = new CallExp("T_ABS");
+                    break;
+                case T_CHR:
+                    callExp = new CallExp("T_CHR");
+                    break;
+                case T_ODD:
+                    callExp = new CallExp("T_ODD");
+                    break;
+                case T_ORD:
+                    callExp = new CallExp("T_ORD");
+                    break;
+                case T_PRED:
+                    callExp = new CallExp("T_PRED");
+                    break;
+                case T_SQR:
+                    callExp = new CallExp("T_SQR");
+                    break;
+                case T_SQRT:
+                    callExp = new CallExp("T_SQRT");
+                    break;
+                case T_SUCC:
+                    callExp = new CallExp("T_SUCC");
+                    break;
+            }
+            return (Base*)callExp;
+        }
+
     }
 }
 
