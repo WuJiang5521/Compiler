@@ -19,7 +19,7 @@ public:
         CHAR char_value;
         BOOLEAN boolean_value;
         std::vector<Value*> children_value; // a list of the value of children
-    } val;
+    } *val;
 };
 
 #endif //SPLCOMPILER_VALUE_H

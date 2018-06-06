@@ -42,9 +42,11 @@
 #define TY_REAL 1
 #define TY_CHAR 2
 #define TY_BOOLEAN 3
-#define TY_SET 4
-#define TY_ARRAY 5
-#define TY_RECORD 6
+#define TY_STRING 4
+#define TY_SET 5
+#define TY_ARRAY 6
+#define TY_RECORD 7
+#define TY_CUSTOM 8
 
 // base object
 class Base;
@@ -86,6 +88,7 @@ class Type;
 class Base {
 public:
     int node_type;
+    bool is_legal = true;
 
     explicit Base(int type = 0);
 };
@@ -97,7 +100,7 @@ public:
 
 class Exp : public Base {
 public:
-    Value *return_value;
+    Value *return_value = nullptr;
     Type *return_type;
 
     explicit Exp(int type = 0);
@@ -181,11 +184,8 @@ class VarDef : public Base {
 public:
     std::string name;
     Type *type = nullptr; // cannot be null
-    Value *initializing_value = nullptr; // can be null
 
     VarDef(const std::string &, Type *);
-
-    VarDef(const std::string &, Type *, Value *);
 };
 
 class FunctionDef : public Base {
@@ -213,6 +213,9 @@ public:
     Exp *right_value;
 
     AssignStm(const std::string &, Exp *);
+    // 这里左值是一个字符串，需要到symtab里找到对应的变量，然后进行类型匹配。但我这里没有建表，所以判断不了。
+    // 需要判断左值是否是常量
+    // 匹配函数我在tree.cpp里写好了 canFillTypeWithValue()，你看能不能用上。
 };
 
 class WithStm : public Stm {
@@ -231,6 +234,7 @@ public:
     explicit CallStm(const std::string &);
 
     void addArgs(Exp *);
+    // 需要判断 参数的类型 和 函数定义时的类型 是否匹配
 };
 
 class LabelStm : public Stm {
@@ -251,6 +255,9 @@ public:
     void setCondition(Exp *);
 
     void addFalse();
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class CaseStm : public Stm {
@@ -261,6 +268,9 @@ public:
     explicit CaseStm(Exp *);
 
     void addSituation(Situation *);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测是否有重复的入口
 };
 
 class ForStm : public Stm {
@@ -271,6 +281,9 @@ public:
     Body *loop = new Body();
 
     ForStm(const std::string &, Exp *, Exp *, int);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class WhileStm : public Stm {
@@ -279,6 +292,9 @@ public:
     Body *loop = new Body();
 
     explicit WhileStm(Exp *);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class RepeatStm : public Stm {
@@ -289,6 +305,9 @@ public:
     RepeatStm() = default;
 
     void setCondition(Exp *);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class GotoStm : public Stm {
@@ -296,8 +315,8 @@ public:
     int label;
 
     explicit GotoStm(int label);
+    // label 存在性检测
 };
-
 
 class UnaryExp: public Exp {
 public:
@@ -305,6 +324,9 @@ public:
     Exp *operand;
 
     UnaryExp(int, Exp*);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class BinaryExp : public Exp {
@@ -313,6 +335,9 @@ public:
     Exp *operand1, *operand2;
 
     BinaryExp(int, Exp *, Exp *);
+
+    void check();
+    // 子节点搞定后，需要调用这个函数检测
 };
 
 class CallExp : public Exp {
@@ -323,6 +348,9 @@ public:
     explicit CallExp(const std::string &);
 
     void addArgs(Exp *);
+    // 需要判断 参数的类型 和 函数定义时的类型 是否匹配
+    // function名在body内可以当变量用
+    // 需要把定义时的return_type赋值给这个结点
 };
 
 class ConstantExp : public Exp {
@@ -337,6 +365,8 @@ public:
     std::string name;
 
     explicit VariableExp(const std::string &);
+    // 结点查到变量后，需要更新return_type
+    // 如果查表发现是常量，需要更新节点的return_value
 };
 
 class MemoryExp : public Exp {
@@ -355,6 +385,7 @@ public:
     std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
 
     Type();
+    explicit Type(int type_code);
 };
 
 // example: printTree("log", new Program())

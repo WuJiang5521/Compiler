@@ -5,6 +5,136 @@
 #include "tree.h"
 #include <fstream>
 
+void yyerror(const char *info) {
+    printf("%s\n", info);
+}
+
+bool canFillTypeWithValue(Type *type, Value *value) {
+    switch (type->base_type) {
+        case TY_REAL:
+            return value->base_type == TY_INTEGER || value->base_type == TY_REAL;
+        case TY_INTEGER: case TY_CHAR: case TY_BOOLEAN:
+            return value->base_type == type->base_type;
+        case TY_STRING:
+            return value->base_type == TY_CHAR || value->base_type == TY_STRING;
+        case TY_ARRAY:
+            if (value->base_type != TY_ARRAY) return false;
+            if (type->array_end - type->array_start + 1 != value->val->children_value.size()) return false;
+            for (int i = 0; i <= type->array_end - type->array_start; i++)
+                if (!canFillTypeWithValue(type->child_type[i], value->val->children_value[i])) return false;
+            return true;
+        case TY_RECORD:
+            if (value->base_type != TY_RECORD) return false;
+            if (type->child_type.size() != value->val->children_value.size()) return false;
+            for (int i = 0; i < type->child_type.size(); i++)
+                if (!canFillTypeWithValue(type->child_type[0], value->val->children_value[i])) return false;
+            return true;
+        default:
+            if (type->base_type == TY_SET || type->base_type >= type_list.size()) return false;
+            return canFillTypeWithValue(type_list[type->base_type], value);
+    }
+}
+
+bool isTypeBoolean(Type *type) {
+    if (type->base_type == TY_BOOLEAN) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeBoolean(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeInt(Type *type) {
+    if (type->base_type == TY_INTEGER) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeInt(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeReal(Type *type) {
+    if (type->base_type == TY_REAL) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeReal(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeChar(Type *type) {
+    if (type->base_type == TY_CHAR) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeChar(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeRecord(Type *type) {
+    if (type->base_type == TY_RECORD) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeRecord(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeArray(Type *type) {
+    if (type->base_type == TY_ARRAY) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeArray(type_list[type->base_type]);
+    else return false;
+}
+
+bool isTypeString(Type *type) {
+    if (type->base_type == TY_STRING) return true;
+    else if (type->base_type >= TY_CUSTOM) return isTypeString(type_list[type->base_type]);
+    else return false;
+}
+
+Type *generateTypeByValue(Value *value) {
+    Type *type;
+    switch (value->base_type) {
+        case TY_INTEGER: case TY_REAL: case TY_CHAR: case TY_BOOLEAN: case TY_STRING:
+            type = new Type(value->base_type);
+            break;
+        case TY_SET: case TY_RECORD:
+            type = new Type(value->base_type);
+            for (auto val: value->val->children_value)
+                type->child_type.push_back(generateTypeByValue(val));
+            break;
+        case TY_ARRAY:
+            type = new Type(TY_ARRAY);
+            type->array_start = 0;
+            type->array_end = value->val->children_value.size() - 1;
+            type->child_type.push_back(generateTypeByValue(value->val->children_value[0]));
+            break;
+        default:
+            type = nullptr;
+    }
+    return type;
+}
+
+Type *copyType(Type *type) {
+    Type *new_type;
+    switch (type->base_type) {
+        case TY_INTEGER: case TY_REAL: case TY_CHAR: case TY_BOOLEAN: case TY_STRING:
+            return new Type(type->base_type);
+        case TY_SET: case TY_RECORD:
+            new_type = new Type(type->base_type);
+            for (auto child: type->child_type)
+                new_type->child_type.push_back(copyType(child));
+            return new_type;
+        case TY_ARRAY:
+            new_type = new Type(TY_ARRAY);
+            new_type->array_start = type->array_start;
+            new_type->array_end = type->array_end;
+            new_type->child_type.push_back(copyType(type->child_type[0]));
+            return new_type;
+        default:
+            return new Type(type->base_type);
+    }
+}
+
+Type *findChildType(Type *pType, const std::string &basic_string) {
+    if (pType->base_type != TY_RECORD) return nullptr;
+    for (Type *child: pType->child_type)
+        if (child->name == basic_string) return child;
+    return nullptr;
+}
+
+bool canFindChild(Type *pType, const std::string &basic_string) {
+    if (pType->base_type != TY_RECORD) return false;
+    for (Type *child: pType->child_type)
+        if (child->name == basic_string) return true;
+    return false;
+}
+
 Base::Base(int type) {
     this->node_type = type;
 }
@@ -36,24 +166,144 @@ void Define::addLabel(LabelDef *def) {
             is_defined = true;
             break;
         }
-    if (is_defined) yyerror();
-    label_def.push_back(def);
+    if (is_defined) {
+        char info[200];
+        sprintf(info, "There are two label %d.", def->label_index);
+        yyerror(info);
+        is_legal = false;
+    } else label_def.push_back(def);
 }
 
 void Define::addConst(ConstDef *def) {
-    const_def.push_back(def);
+    bool is_defined = false;
+    for (auto const_iter: const_def)
+        if (def->name == const_iter->name) {
+            is_defined = true;
+            break;
+        }
+    if (!is_defined)
+        for (auto type_iter: type_def)
+            if (def->name == type_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto var_iter: var_def)
+            if (def->name == var_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto func_iter: function_def)
+            if (def->name == func_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (is_defined) {
+        char info[200];
+        sprintf(info, "There are two const, type, variable, function or procedure has the same name %s.", def->name);
+        yyerror(info);
+        is_legal = false;
+    } else const_def.push_back(def);
 }
 
 void Define::addType(TypeDef *def) {
-    type_def.push_back(def);
+    bool is_defined = false;
+    for (auto const_iter: const_def)
+        if (def->name == const_iter->name) {
+            is_defined = true;
+            break;
+        }
+    if (!is_defined)
+        for (auto type_iter: type_def)
+            if (def->name == type_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto var_iter: var_def)
+            if (def->name == var_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto func_iter: function_def)
+            if (def->name == func_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (is_defined) {
+        char info[200];
+        sprintf(info, "There are two const, type, variable, function or procedure has the same name %s.", def->name);
+        yyerror(info);
+        is_legal = false;
+    } else type_def.push_back(def);
 }
 
 void Define::addVar(VarDef *def) {
-    var_def.push_back(def);
+    bool is_defined = false;
+    for (auto const_iter: const_def)
+        if (def->name == const_iter->name) {
+            is_defined = true;
+            break;
+        }
+    if (!is_defined)
+        for (auto type_iter: type_def)
+            if (def->name == type_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto var_iter: var_def)
+            if (def->name == var_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto func_iter: function_def)
+            if (def->name == func_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (is_defined) {
+        char info[200];
+        sprintf(info, "There are two const, type, variable, function or procedure has the same name %s.", def->name);
+        yyerror(info);
+        is_legal = false;
+    } else var_def.push_back(def);
 }
 
 void Define::addFunction(FunctionDef *def) {
-    function_def.push_back(def);
+    bool is_defined = false;
+    for (auto const_iter: const_def)
+        if (def->name == const_iter->name) {
+            is_defined = true;
+            break;
+        }
+    if (!is_defined)
+        for (auto type_iter: type_def)
+            if (def->name == type_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto var_iter: var_def)
+            if (def->name == var_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (!is_defined)
+        for (auto func_iter: function_def)
+            if (def->name == func_iter->name) {
+                is_defined = true;
+                break;
+            }
+    if (is_defined) {
+        char info[200];
+        sprintf(info, "There are two const, type, variable, function or procedure has the same name %s.", def->name);
+        yyerror(info);
+        is_legal = false;
+    } else function_def.push_back(def);
 }
 
 Body::Body() : Base(N_BODY) {
@@ -89,13 +339,6 @@ TypeDef::TypeDef(const std::string &name, Type *type) : Base(N_TYPE_DEF) {
 VarDef::VarDef(const std::string &name, Type *type) : Base(N_VAR_DEF) {
     this->name = name;
     this->type = type;
-    this->initializing_value = nullptr;
-}
-
-VarDef::VarDef(const std::string &name, Type *type, Value *initialize_value) : Base(N_VAR_DEF) {
-    this->name = name;
-    this->type = type;
-    this->initializing_value = initialize_value;
 }
 
 FunctionDef::FunctionDef(const std::string &name) : Base(N_FUNCTION_DEF) {
@@ -105,9 +348,22 @@ FunctionDef::FunctionDef(const std::string &name) : Base(N_FUNCTION_DEF) {
 }
 
 void FunctionDef::addArgs(const std::string &arg_name, Type *arg_type, bool is_formal_parameter) {
-    args_name.push_back(arg_name);
-    args_type.push_back(arg_type);
-    args_is_formal_parameters.push_back(is_formal_parameter);
+    bool is_defined = false;
+    for (auto arg_iter: args_name)
+        if (arg_name == arg_iter) {
+            is_defined = true;
+            break;
+        }
+    if (is_defined) {
+        char info[300];
+        sprintf(info, "There are two arguments has the same name %s, in function %s.", arg_name, name);
+        yyerror(info);
+        is_legal = false;
+    } else {
+        args_name.push_back(arg_name);
+        args_type.push_back(arg_type);
+        args_is_formal_parameters.push_back(is_formal_parameter);
+    }
 }
 
 void FunctionDef::setReturnType(Type *rtn_type) {
@@ -116,6 +372,7 @@ void FunctionDef::setReturnType(Type *rtn_type) {
 
 void FunctionDef::addDefine(Define *def) {
     if (define == nullptr) define = def;
+    // define 和 arguments 重复性判定，暂时不管
 }
 
 AssignStm::AssignStm(const std::string &left, Exp *right) : Stm(N_ASSIGN_STM) {
@@ -125,6 +382,7 @@ AssignStm::AssignStm(const std::string &left, Exp *right) : Stm(N_ASSIGN_STM) {
 
 WithStm::WithStm(const std::string &name) : Stm(N_WITH_STM) {
     this->name = name;
+    // body 内 可以省去此前缀，样例里没有，暂时不管
 }
 
 CallStm::CallStm(const std::string &name) : Stm(N_CALL_STM) {
@@ -138,6 +396,7 @@ void CallStm::addArgs(Exp *exp) {
 
 LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     this->label = label;
+    // 重复性检测，避免跳转时出现多个目的地，暂时不管
 }
 
 IfStm::IfStm() : Stm(N_IF_STM) {}
@@ -150,13 +409,69 @@ void IfStm::addFalse() {
     this->false_do = new Body();
 }
 
+void IfStm::check() {
+    if (!isTypeBoolean(condition->return_type)) {
+        char info[200];
+        sprintf(info, "There is a return value of the expression in if_cond, whose type is not boolean.");
+        yyerror(info);
+        is_legal = false;
+    }
+}
+
 CaseStm::CaseStm(Exp *obj) : Stm(N_CASE_STM) {
-    object = obj;
-    situations.clear();
+    if (isTypeInt(obj->return_type) || isTypeChar(obj->return_type)) {
+        object = obj;
+        situations.clear();
+    } else {
+        char info[200];
+        sprintf(info, "The type for case statement must be integer or char.");
+        yyerror(info);
+        is_legal = false;
+    }
 }
 
 void CaseStm::addSituation(Situation *situation) {
     situations.push_back(situation);
+    // 各个match情况的重复性检测，避免多入口，暂时不管
+}
+
+void CaseStm::check() {
+    // 全常量检测
+    for (auto situation: situations)
+        for (auto match_item: situation->match_list)
+            if (match_item->return_value == nullptr) {
+                char info[200];
+                sprintf(info, "The match items in case statement must be constant.");
+                yyerror(info);
+                is_legal = false;
+                return;
+            }
+    // 类型匹配
+    bool is_int = isTypeInt(object->return_type);
+    for (auto situation: situations)
+        for (auto match_item: situation->match_list)
+            if (is_int != isTypeInt(match_item->return_type)) {
+                char info[200];
+                sprintf(info, "The match items in case statement must have the same type as the switch object.");
+                yyerror(info);
+                is_legal = false;
+                return;
+            }
+    // 重复值检测
+    bool flag[65536];
+    for (bool &i : flag) i = false;
+    for (auto situation: situations)
+        for (Exp* match_item: situation->match_list) {
+            int id = is_int ? (match_item->return_value->val->integer_value + 32768) : ((int)match_item->return_value->val->char_value);
+            if (flag[id]) {
+                char info[200];
+                sprintf(info, "The match items in case statement must be different.");
+                yyerror(info);
+                is_legal = false;
+                return;
+            }
+            flag[id] = true;
+        }
 }
 
 ForStm::ForStm(const std::string &iter, Exp *start, Exp *end, int step) : Stm(N_FOR_STM) {
@@ -166,14 +481,42 @@ ForStm::ForStm(const std::string &iter, Exp *start, Exp *end, int step) : Stm(N_
     this->step = step;
 }
 
+void ForStm::check() {
+    if ((isTypeInt(start->return_type) && isTypeInt(end->return_type)) ||
+        (isTypeChar(start->return_type) && isTypeChar(end->return_type))) {
+        char info[200];
+        sprintf(info, "The start index and the end index is illegal.");
+        yyerror(info);
+        is_legal = false;
+    }
+}
+
 WhileStm::WhileStm(Exp *cond) : Stm(N_WHILE_STM) {
     condition = cond;
+}
+
+void WhileStm::check() {
+    if (!isTypeBoolean(condition->return_type)) {
+        char info[200];
+        sprintf(info, "There is a return value of the expression in while_cond, whose type is not boolean.");
+        yyerror(info);
+        is_legal = false;
+    }
 }
 
 RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
 
 void RepeatStm::setCondition(Exp *cond) {
     if (condition == nullptr) condition = cond;
+}
+
+void RepeatStm::check() {
+    if (!isTypeBoolean(condition->return_type)) {
+        char info[200];
+        sprintf(info, "There is a return value of the expression in repeat_cond, whose type is not boolean.");
+        yyerror(info);
+        is_legal = false;
+    }
 }
 
 GotoStm::GotoStm(int label) : Stm(label) {
@@ -185,10 +528,361 @@ UnaryExp::UnaryExp(int op_code, Exp *oprand) {
     this->operand = oprand;
 }
 
+void UnaryExp::check() {
+    switch (op_code) {
+        case OP_OPPO: {
+            if (!isTypeInt(operand->return_type) && !isTypeReal(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of an operand with an unary operator \'-\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = copyType(operand->return_type);
+            }
+        }
+            break;
+        case OP_NOT: {
+            if (!isTypeChar(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of an operand with an unary operator \'not\' must be boolean.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_ABS: {
+            if (!isTypeInt(operand->return_type) && !isTypeReal(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'abs\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = copyType(operand->return_type);
+            }
+        }
+            break;
+        case OP_PRED: {
+            if (!isTypeChar(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'pred\' must be char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_CHAR);
+            }
+        }
+            break;
+        case OP_SUCC: {
+            if (!isTypeChar(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'succ\' must be char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_CHAR);
+            }
+        }
+            break;
+        case OP_ODD: {
+            if (!isTypeInt(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'odd\' must be integer.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_CHR: {
+            if (!isTypeInt(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'chr\' must be integer.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_CHAR);
+            }
+        }
+            break;
+        case OP_ORD: {
+            if (!isTypeChar(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'ord\' must be char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_SQR: {
+            if (!isTypeInt(operand->return_type) && !isTypeReal(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'sqr\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_REAL);
+            }
+        }
+            break;
+        case OP_SQRT: {
+            if (!isTypeInt(operand->return_type) && !isTypeReal(operand->return_type)) {
+                char info[200];
+                sprintf(info, "The type of the parameter in function \'sqrt\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_REAL);
+            }
+        }
+            break;
+        default: {
+            char info[200];
+            sprintf(info, "There is something wrong. This operator type is unrecognised.");
+            yyerror(info);
+            is_legal = false;
+        }
+    }
+}
+
 BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2) : Exp(N_BINARY_EXP) {
     this->op_code = op_code;
     this->operand1 = operand1;
     this->operand2 = operand2;
+}
+
+void BinaryExp::check() {
+    switch (op_code) {
+        case OP_ADD: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'+\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                if (isTypeReal(operand1->return_type) || isTypeReal(operand2->return_type))
+                    return_type = new Type(TY_REAL);
+                else return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_MINUS: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'-\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                if (isTypeReal(operand1->return_type) || isTypeReal(operand2->return_type))
+                    return_type = new Type(TY_REAL);
+                else return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_MULTI: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'*\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                if (isTypeReal(operand1->return_type) || isTypeReal(operand2->return_type))
+                    return_type = new Type(TY_REAL);
+                else return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_RDIV: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'/\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_REAL);
+            }
+        }
+            break;
+        case OP_DDIV: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'div\' must be integer or real.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_MOD: {
+            if (!isTypeInt(operand1->return_type) || !isTypeInt(operand2->return_type)) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'%%\' must be integer.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_INTEGER);
+            }
+        }
+            break;
+        case OP_AND: {
+            if (!isTypeChar(operand1->return_type) || !isTypeChar(operand2->return_type)) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'and\' must be boolean.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_OR: {
+            if (!isTypeChar(operand1->return_type) || !isTypeChar(operand2->return_type)) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'or\' must be boolean.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_SMALL: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'<\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_LARGE: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'>\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_SMALL_EQUAL: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'<=\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_LARGE_EQUAL: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'>=\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_EQUAL: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'=\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_NOT_EQUAL: {
+            if ((!isTypeInt(operand1->return_type) && !isTypeReal(operand1->return_type) &&
+                 !isTypeChar(operand1->return_type)) ||
+                (!isTypeInt(operand2->return_type) && !isTypeReal(operand2->return_type) &&
+                 !isTypeChar(operand1->return_type))) {
+                char info[200];
+                sprintf(info, "The type of operands with a binary operator \'<>\' must be integer, real or char.");
+                yyerror(info);
+                is_legal = false;
+            } else {
+                return_type = new Type(TY_BOOLEAN);
+            }
+        }
+            break;
+        case OP_DOT: {
+            if (isTypeRecord(operand1->return_type))
+                if (canFindChild(operand1->return_type, ((VariableExp *) operand2)->name))
+                    return_type = copyType(findChildType(operand1->return_type, ((VariableExp *) operand2)->name));
+                else {
+                    char info[200];
+                    sprintf(info, "Cannot find child named %s in this record.", ((VariableExp *) operand2)->name);
+                    yyerror(info);
+                    is_legal = false;
+                }
+            else {
+                char info[200];
+                sprintf(info, "The type of the first operand in the binary operator \'.\' must be record.");
+                yyerror(info);
+                is_legal = false;
+            }
+        }
+            break;
+        case OP_INDEX: {
+            if (isTypeArray(operand1->return_type) || isTypeString(operand1->return_type))
+                if (isTypeInt(operand2->return_type) || isTypeChar(operand2->return_type))
+                    return_type = copyType(operand1->return_type->child_type[0]);
+                else {
+                    char info[200];
+                    sprintf(info, "The index must be integer or char.");
+                    yyerror(info);
+                    is_legal = false;
+                }
+            else {
+                char info[200];
+                sprintf(info, "The type of the first operand in the binary operator \'[]\' must be array or string.");
+                yyerror(info);
+                is_legal = false;
+            }
+        }
+            break;
+        default: {
+            char info[200];
+            sprintf(info, "There is something wrong. This operator type is unrecognised.");
+            yyerror(info);
+            is_legal = false;
+        }
+    }
 }
 
 CallExp::CallExp(const std::string &name) : Exp(N_CALL_STM) {
@@ -201,7 +895,8 @@ void CallExp::addArgs(Exp *exp) {
 }
 
 ConstantExp::ConstantExp(Value *val) : Exp(N_CONSTANT_EXP) {
-    value = val;
+    return_value = value = val;
+    return_type = generateTypeByValue(val);
 }
 
 VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {
@@ -214,6 +909,10 @@ MemoryExp::MemoryExp(ADDRESS addr) : Exp(N_MEMORY_EXP) {
 
 Type::Type() : Base(N_TYPE) {}
 
+Type::Type(int type_code) : Base(N_TYPE) {
+    base_type = type_code;
+}
+
 std::string getString(Value *value) {
     std::string str;
     if (value == nullptr) str = "NULL";
@@ -221,33 +920,33 @@ std::string getString(Value *value) {
         switch (value->base_type) {
             case TY_INTEGER: {
                 char val[10];
-                sprintf(val, "%d", value->val.integer_value);
+                sprintf(val, "%d", value->val->integer_value);
                 str.append(val);
             }
                 break;
             case TY_REAL: {
                 char val[10];
-                sprintf(val, "%.2f", value->val.real_value);
+                sprintf(val, "%.2f", value->val->real_value);
                 str.append(val);
             }
                 break;
             case TY_CHAR: {
                 str.append("\'");
                 char val[2];
-                sprintf(val, "%c", value->val.char_value);
+                sprintf(val, "%c", value->val->char_value);
                 str.append(val);
                 str.append("\'");
             }
                 break;
             case TY_BOOLEAN: {
-                str.append(value->val.boolean_value ? "true": "false");
+                str.append(value->val->boolean_value ? "true" : "false");
             }
                 break;
             case TY_SET:
             case TY_ARRAY:
             case TY_RECORD: {
                 str.append("[");
-                for (auto child: value->val.children_value) {
+                for (auto child: value->val->children_value) {
                     str.append(getString(child));
                     str.append(",");
                 }
@@ -370,10 +1069,6 @@ std::string getString(Base *ori_node) {
                 str.append(node->name);
                 str.append("\", structure: ");
                 str.append(getString(node->type));
-                if (node->initializing_value != nullptr) {
-                    str.append(", init_value: ");
-                    str.append(getString(node->initializing_value));
-                }
                 str.append("}");
             }
                 break;
