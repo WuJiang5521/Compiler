@@ -659,14 +659,14 @@ Type *copyType(Type *origin) {
 Type *ast::findType(const std::string &type_name, Base *node) {
     switch (node->node_type) {
         case N_PROGRAM:
-            return findType(type_name, ((Program*)node)->define);
+            return findType(type_name, ((Program *) node)->define);
         case N_FUNCTION_DEF: {
             Type *local = findType(type_name, ((FunctionDef *) node)->define);
             if (local == nullptr) return findType(type_name, node->father);
             else return local;
         }
         case N_DEFINE: {
-            Define *d_node = (Define*)node;
+            Define *d_node = (Define *) node;
             for (TypeDef *iter: d_node->type_def) {
                 Type *result = findType(type_name, iter);
                 if (result != nullptr) return result;
@@ -674,15 +674,15 @@ Type *ast::findType(const std::string &type_name, Base *node) {
             return nullptr;
         }
         case N_TYPE_DEF: {
-            TypeDef *td_node = (TypeDef*)node;
-            if(td_node->name == type_name) return copyType(td_node->type);
+            TypeDef *td_node = (TypeDef *) node;
+            if (td_node->name == type_name) return copyType(td_node->type);
             else return nullptr;
         }
-        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_VAR_DEF: case N_FUNCTION_DEF:
-        case N_ASSIGN_STM: case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM:
-        case N_LABEL_STM: case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP:
-        case N_CONSTANT_EXP: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
-                return findType(type_name, node->father);
+        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
+        case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
+        case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP: case N_CONSTANT_EXP:
+        case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
+            return findType(type_name, node->father);
         default:
             return nullptr;
     }
