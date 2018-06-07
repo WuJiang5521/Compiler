@@ -5,6 +5,8 @@
 #include "tree.h"
 #include <fstream>
 
+using namespace ast;
+
 Base::Base(int type) {
     this->node_type = type;
 }

@@ -17,6 +17,8 @@
 #define DEFAULT_STRING = "";
 #define DEFAULT_PTR = nullptr
 
+using namespace ast;
+
 class Translator {
 public:
     static Base* translate(cst_tree tree);
