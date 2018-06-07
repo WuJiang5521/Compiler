@@ -273,7 +273,7 @@ std::string getString(Value *value) {
             }
                 break;
             case TY_BOOLEAN: {
-                str.append(value->val.boolean_value ? "true": "false");
+                str.append(value->val.boolean_value ? "true" : "false");
             }
                 break;
             case TY_SET:
@@ -640,12 +640,12 @@ std::string getString(Base *ori_node) {
                         }
                     }
                         break;
-                    /*
-                    default: {
-                        if (node->base_type < type_list.size()) str.append(type_list[node->base_type]->name);
-                        else str.append("\"There is something wrong. The type cannot be recognised.\"");
-                    }
-                    */
+                        /*
+                        default: {
+                            if (node->base_type < type_list.size()) str.append(type_list[node->base_type]->name);
+                            else str.append("\"There is something wrong. The type cannot be recognised.\"");
+                        }
+                        */
                 }
             }
                 break;
@@ -661,4 +661,47 @@ void printTree(std::string filename, Base *root) {
     std::ofstream SaveFile(filename + ".json");
     SaveFile << str;
     SaveFile.close();
+}
+
+Type *copyType(Type *origin) {
+    Type *copy = new Type();
+    copy->name = origin->name;
+    copy->array_start = origin->array_start;
+    copy->array_end = origin->array_end;
+    copy->child_type.clear();
+    for (Type *iter: origin->child_type)
+        copy->child_type.push_back(copyType(iter));
+    return copy;
+}
+
+Type *findType(const std::string &type_name, Base *node) {
+    switch (node->node_type) {
+        case N_PROGRAM:
+            return findType(type_name, ((Program*)node)->define);
+        case N_FUNCTION_DEF: {
+            Type *local = findType(type_name, ((FunctionDef *) node)->define);
+            if (local == nullptr) return findType(type_name, node->father);
+            else return local;
+        }
+        case N_DEFINE: {
+            Define *d_node = (Define*)node;
+            for (TypeDef *iter: d_node->type_def) {
+                Type *result = findType(type_name, iter);
+                if (result != nullptr) return result;
+            }
+            return nullptr;
+        }
+        case N_TYPE_DEF: {
+            TypeDef *td_node = (TypeDef*)node;
+            if(td_node->name == type_name) return copyType(td_node->type);
+            else return nullptr;
+        }
+        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_VAR_DEF: case N_FUNCTION_DEF:
+        case N_ASSIGN_STM: case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM:
+        case N_LABEL_STM: case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP:
+        case N_CONSTANT_EXP: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
+                return findType(type_name, node->father);
+        default:
+            return nullptr;
+    }
 }
