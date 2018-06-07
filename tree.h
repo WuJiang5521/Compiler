@@ -30,7 +30,6 @@
 #define N_LABEL_STM 26
 #define N_REPEAT_STM 27
 #define N_WHILE_STM 28
-#define N_WITH_STM 29
 #define N_BINARY_EXP 40
 #define N_CALL_EXP 41
 #define N_CONSTANT_EXP 42
@@ -43,9 +42,8 @@
 #define TY_REAL 1
 #define TY_CHAR 2
 #define TY_BOOLEAN 3
-#define TY_SET 4
-#define TY_ARRAY 5
-#define TY_RECORD 6
+#define TY_ARRAY 4
+#define TY_RECORD 5
 
 //codegen
 class CodeGenContext;
@@ -77,7 +75,6 @@ class IfStm;
 class LabelStm;
 class RepeatStm;
 class WhileStm;
-class WithStm;
 // exp
 class UnaryExp;
 class BinaryExp;
@@ -87,17 +84,15 @@ class VariableExp;
 class MemoryExp;
 // type
 class Type;
-
 //value
 class Value;
-
-
 
 
 // define
 class Base {
 public:
     int node_type;
+    Base *father = nullptr;
 
     explicit Base(int type = 0);
     
@@ -136,8 +131,6 @@ class ExpList : public Base {
 public:
     std::vector<Exp *> exps;
     void addExp(Exp*);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class Program : public Base {
@@ -209,12 +202,9 @@ class VarDef : public Base {
 public:
     std::string name;
     Type *type = nullptr; // cannot be null
-    Value *initializing_value = nullptr; // can be null
     bool is_global = false;
 
     VarDef(const std::string &, Type *);
-
-    VarDef(const std::string &, Type *, Value *);
     
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -250,16 +240,6 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class WithStm : public Stm {
-public:
-    std::string name;
-    Body *body = new Body();
-
-    explicit WithStm(const std::string &);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
-
 class CallStm : public Stm {
 public:
     std::string name;
@@ -287,7 +267,7 @@ public:
     Body *true_do = new Body(); // cannot be nullptr
     Body *false_do = nullptr; // can be nullptr
 
-    IfStm() = default;
+    IfStm();
 
     void setCondition(Exp *);
 
@@ -347,7 +327,7 @@ public:
     Exp *condition = nullptr;
     Body *loop = new Body();
 
-    RepeatStm() = default;
+    RepeatStm();
 
     void setCondition(Exp *);
     
@@ -362,7 +342,6 @@ public:
     
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
-
 
 class UnaryExp: public Exp {
 public:
@@ -454,12 +433,7 @@ public:
 // example: printTree("log", new Program())
 void printTree(std::string filename, Base *root);
 
-// example: addType(new Type())
-void addType(Type *type);
-
 // example: Type *type = findType("arr");
-Type *findType(std::string type_name);
-
-//extern std::vector<Type *> type_list;
+Type *findType(std::string type_name, Base *node);
 }
 #endif //SPLCOMPILER_TREE_H

@@ -17,10 +17,14 @@ Exp::Exp(int type) : Base(type) {}
 
 Program::Program(const std::string &name) : Base(N_PROGRAM) {
     this->name = name;
+    body->father = this;
 }
 
 void Program::addDefine(Define *define) {
-    if (this->define == nullptr) this->define = define;
+    if (this->define == nullptr) {
+        define->father = this;
+        this->define = define;
+    }
 }
 
 Define::Define() : Base(N_DEFINE) {
@@ -32,22 +36,27 @@ Define::Define() : Base(N_DEFINE) {
 }
 
 void Define::addLabel(LabelDef *def) {
+    def->father = this;
     label_def.push_back(def);
 }
 
 void Define::addConst(ConstDef *def) {
+    def->father = this;
     const_def.push_back(def);
 }
 
 void Define::addType(TypeDef *def) {
+    def->father = this;
     type_def.push_back(def);
 }
 
 void Define::addVar(VarDef *def) {
+    def->father = this;
     var_def.push_back(def);
 }
 
 void Define::addFunction(FunctionDef *def) {
+    def->father = this;
     function_def.push_back(def);
 }
 
@@ -60,14 +69,17 @@ Body::Body() : Base(N_BODY) {
 }
 
 void Body::addStm(Stm *stm) {
+    stm->father = this;
     stms.push_back(stm);
 }
 
 Situation::Situation() : Base(N_SITUATION) {
+    solution->father = this;
     match_list.clear();
 }
 
 void Situation::addMatch(Exp *exp) {
+    exp->father = this;
     match_list.push_back(exp);
 }
 
@@ -76,11 +88,13 @@ LabelDef::LabelDef(int index) : Base(N_LABEL_DEF) {
 }
 
 ConstDef::ConstDef(const std::string &name, Exp *val) : Base(N_CONST_DEF) {
+    val->father = this;
     this->name = name;
     this->value = val;
 }
 
 TypeDef::TypeDef(const std::string &name, Type *type) : Base(N_TYPE_DEF) {
+    type->father = this;
     this->name = name;
     this->type = type;
 }
@@ -88,42 +102,41 @@ TypeDef::TypeDef(const std::string &name, Type *type) : Base(N_TYPE_DEF) {
 VarDef::VarDef(const std::string &name, Type *type) : Base(N_VAR_DEF) {
     this->name = name;
     this->type = type;
-    this->initializing_value = nullptr;
-}
-
-VarDef::VarDef(const std::string &name, Type *type, Value *initialize_value) : Base(N_VAR_DEF) {
-    this->name = name;
-    this->type = type;
-    this->initializing_value = initialize_value;
 }
 
 FunctionDef::FunctionDef(const std::string &name) : Base(N_FUNCTION_DEF) {
     this->name = name;
+    body->father = this;
     args_type.clear();
     args_name.clear();
 }
 
 void FunctionDef::addArgs(const std::string &arg_name, Type *arg_type, bool is_formal_parameter) {
+    arg_type->father = this;
     args_name.push_back(arg_name);
     args_type.push_back(arg_type);
     args_is_formal_parameters.push_back(is_formal_parameter);
 }
 
 void FunctionDef::setReturnType(Type *rtn_type) {
-    if (this->rtn_type == nullptr) this->rtn_type = rtn_type;
+    if (this->rtn_type == nullptr) {
+        rtn_type->father = this;
+        this->rtn_type = rtn_type;
+    }
 }
 
 void FunctionDef::addDefine(Define *def) {
-    if (define == nullptr) define = def;
+    if (define == nullptr) {
+        def->father = this;
+        define = def;
+    }
 }
 
 AssignStm::AssignStm(Exp *left, Exp *right) : Stm(N_ASSIGN_STM) {
+    left->father = this;
+    right->father = this;
     this->left_value = left;
     this->right_value = right;
-}
-
-WithStm::WithStm(const std::string &name) : Stm(N_WITH_STM) {
-    this->name = name;
 }
 
 CallStm::CallStm(const std::string &name) : Stm(N_CALL_STM) {
@@ -132,6 +145,7 @@ CallStm::CallStm(const std::string &name) : Stm(N_CALL_STM) {
 }
 
 void CallStm::addArgs(Exp *exp) {
+    exp->father = this;
     this->args.push_back(exp);
 }
 
@@ -139,22 +153,32 @@ LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     this->label = label;
 }
 
-//IfStm::IfStm() : Stm(N_IF_STM) {}
+IfStm::IfStm() : Stm(N_IF_STM) {
+    this->true_do->father = this;
+}
 
 void IfStm::setCondition(Exp *cond) {
-    condition = cond;
+    if (this->condition == nullptr) {
+        cond->father = this;
+        condition = cond;
+    }
 }
 
 void IfStm::addFalse() {
-    this->false_do = new Body();
+    if (this->false_do == nullptr) {
+        this->false_do = new Body();
+        this->false_do->father = this;
+    }
 }
 
 CaseStm::CaseStm(Exp *obj) : Stm(N_CASE_STM) {
+    obj->father = this;
     object = obj;
     situations.clear();
 }
 
 void CaseStm::addSituation(Situation *situation) {
+    situation->father = this;
     situations.push_back(situation);
 }
 
@@ -163,16 +187,26 @@ ForStm::ForStm(const std::string &iter, Exp *start, Exp *end, int step) : Stm(N_
     this->start = start;
     this->end = end;
     this->step = step;
+    start->father = this;
+    end->father = this;
+    loop->father = this;
 }
 
 WhileStm::WhileStm(Exp *cond) : Stm(N_WHILE_STM) {
     condition = cond;
+    cond->father = this;
+    loop->father = this;
 }
 
-//RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
+RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {
+    loop->father = this;
+}
 
 void RepeatStm::setCondition(Exp *cond) {
-    if (condition == nullptr) condition = cond;
+    if (condition == nullptr) {
+        condition = cond;
+        cond->father = this;
+    }
 }
 
 GotoStm::GotoStm(int label) : Stm(label) {
@@ -182,12 +216,15 @@ GotoStm::GotoStm(int label) : Stm(label) {
 UnaryExp::UnaryExp(int op_code, Exp *oprand) {
     this->op_code = op_code;
     this->operand = oprand;
+    oprand->father = this;
 }
 
 BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2) : Exp(N_BINARY_EXP) {
     this->op_code = op_code;
     this->operand1 = operand1;
     this->operand2 = operand2;
+    operand1->father = this;
+    operand2->father = this;
 }
 
 CallExp::CallExp(const std::string &name) : Exp(N_CALL_STM) {
@@ -196,6 +233,7 @@ CallExp::CallExp(const std::string &name) : Exp(N_CALL_STM) {
 }
 
 void CallExp::addArgs(Exp *exp) {
+    exp->father = this;
     args.push_back(exp);
 }
 
