@@ -393,15 +393,6 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class MemoryExp : public Exp {
-public:
-    ADDRESS address;
-
-    explicit MemoryExp(ADDRESS address);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
-
 class Type : public Base {
 public:
     std::string name; // use what name to find this value, may be empty

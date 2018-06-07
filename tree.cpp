@@ -245,10 +245,6 @@ VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {
     this->name = name;
 }
 
-MemoryExp::MemoryExp(ADDRESS addr) : Exp(N_MEMORY_EXP) {
-    address = addr;
-}
-
 Type::Type() : Base(N_TYPE) {}
 
 std::string getString(Value *value) {
