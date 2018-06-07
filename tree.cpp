@@ -276,7 +276,6 @@ std::string getString(Value *value) {
                 str.append(value->val.boolean_value ? "true" : "false");
             }
                 break;
-            case TY_SET:
             case TY_ARRAY:
             case TY_RECORD: {
                 str.append("[");
@@ -403,10 +402,6 @@ std::string getString(Base *ori_node) {
                 str.append(node->name);
                 str.append("\", structure: ");
                 str.append(getString(node->type));
-                if (node->initializing_value != nullptr) {
-                    str.append(", init_value: ");
-                    str.append(getString(node->initializing_value));
-                }
                 str.append("}");
             }
                 break;
@@ -537,15 +532,6 @@ std::string getString(Base *ori_node) {
                 str.append("}");
             }
                 break;
-            case N_WITH_STM: {
-                auto *node = (WithStm *) ori_node;
-                str.append("{with_var:\"");
-                str.append(node->name);
-                str.append("\",body:");
-                str.append(getString(node->body));
-                str.append("}");
-            }
-                break;
             case N_BINARY_EXP: {
                 auto *node = (BinaryExp *) ori_node;
                 str.append("{bin_op:\"");
@@ -611,10 +597,6 @@ std::string getString(Base *ori_node) {
                         str.append("\"boolean\"");
                     }
                         break;
-                    case TY_SET: {
-                        str.append("\"set\"");
-                    }
-                        break;
                     case TY_ARRAY: {
                         str.append("{type:\"array\",start_index:");
                         char num[100];
@@ -674,7 +656,7 @@ Type *copyType(Type *origin) {
     return copy;
 }
 
-Type *findType(const std::string &type_name, Base *node) {
+Type *ast::findType(const std::string &type_name, Base *node) {
     switch (node->node_type) {
         case N_PROGRAM:
             return findType(type_name, ((Program*)node)->define);
