@@ -17,6 +17,8 @@
 #include "common.h"
 #include "symtab.h"
 
+using namespace ast;
+
 std::string lookup_string(int index) {
     extern sym_tab_node symtab[];
     std::string result = symtab[index].id;

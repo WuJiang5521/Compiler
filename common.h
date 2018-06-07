@@ -21,15 +21,14 @@
 #define OP_MOD 5
 #define OP_AND 6
 #define OP_OR 7
-#define OP_NOT 8
-#define OP_SMALL 9
-#define OP_LARGE 10
-#define OP_SMALL_EQUAL 11
-#define OP_LARGE_EQUAL 12
-#define OP_EQUAL 13
-#define OP_NOT_EQUAL 14
-#define OP_DOT 15
-#define OP_INDEX 16
+#define OP_SMALL 8
+#define OP_LARGE 9
+#define OP_SMALL_EQUAL 10
+#define OP_LARGE_EQUAL 11
+#define OP_EQUAL 12
+#define OP_NOT_EQUAL 13
+#define OP_DOT 14
+#define OP_INDEX 15
 // 单目：依次为 取反 绝对值 前驱 后继 奇偶判定 转字符 转Ascii码
 #define OP_OPPO 20
 #define OP_ABS 21
@@ -38,6 +37,7 @@
 #define OP_ODD 24
 #define OP_CHR 25
 #define OP_ORD 26
+#define OP_NOT 27
 
 std::string getOpNameByID(int id);
 

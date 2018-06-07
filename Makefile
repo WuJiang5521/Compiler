@@ -6,7 +6,7 @@
 all:
 	flex spl.l
 	bison -d spl.y
-	clang++ -g -std=c++11 lex.yy.c spl.tab.c cst.cpp translator.cpp tree.cpp common.cpp -lfl
+	clang++ -g -std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs core` lex.yy.c spl.tab.c cst.cpp translator.cpp tree.cpp common.cpp codegen.cpp -lfl -o tester
 
 clean:
 	rm lex.yy.c spl.tab.* *.json a.out
