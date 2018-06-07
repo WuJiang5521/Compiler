@@ -24,8 +24,6 @@ std::string getOpNameByID(int id) {
             return "&&";
         case OP_OR:
             return "||";
-        case OP_NOT:
-            return "!";
         case OP_SMALL:
             return "<";
         case OP_LARGE:
@@ -38,6 +36,10 @@ std::string getOpNameByID(int id) {
             return "=";
         case OP_NOT_EQUAL:
             return "<>";
+        case OP_DOT:
+            return ".";
+        case OP_INDEX:
+            return "[]";
         case OP_OPPO:
             return "-";
         case OP_ABS:
@@ -52,5 +54,7 @@ std::string getOpNameByID(int id) {
             return "chr";
         case OP_ORD:
             return "ord";
+        case OP_NOT:
+            return "!";
     }
 }

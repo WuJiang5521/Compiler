@@ -33,9 +33,8 @@
 #define N_BINARY_EXP 40
 #define N_CALL_EXP 41
 #define N_CONSTANT_EXP 42
-#define N_MEMORY_EXP 43
-#define N_UNARY_EXP 44
-#define N_VARIABLE_EXP 45
+#define N_UNARY_EXP 43
+#define N_VARIABLE_EXP 44
 #define N_TYPE 50
 // type code
 #define TY_INTEGER 0

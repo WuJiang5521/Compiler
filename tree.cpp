@@ -576,14 +576,6 @@ std::string getString(Base *ori_node) {
                 str.append("}");
             }
                 break;
-            case N_MEMORY_EXP: {
-                auto *node = (MemoryExp *) ori_node;
-                str.append("{mem_addr:");
-                char hex_addr[100];
-                sprintf(hex_addr, "%lx", node->address);
-                str.append("\"}");
-            }
-                break;
             case N_UNARY_EXP: {
                 auto *node = (UnaryExp *) ori_node;
                 str.append("{mon_op:\"");
