@@ -222,36 +222,36 @@ sys_type : T_CHAR
 
 simple_type_decl : sys_type
     {
-        $$ = create_node(NOTHING, SIMPLE_TYPE_DECL, $1, NULL, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, SIMPLE_TYPE_DECL_1, $1, NULL, NULL, NULL, NULL);
     }
 	| S_ID
     {
-        $$ = create_node($1, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node($1, SIMPLE_TYPE_DECL_2, NULL, NULL, NULL, NULL, NULL);
     }
 	| T_LP name_list T_RP
     {
-        $$ = create_node(NOTHING, SIMPLE_TYPE_DECL, $2, NULL, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, SIMPLE_TYPE_DECL_3, $2, NULL, NULL, NULL, NULL);
     }
 	| const_value T_DOTDOT const_value
     {
-        $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE_1, $1, $3, NULL, NULL, NULL);
     }
 	| T_MINUS const_value T_DOTDOT const_value
     {
         cst_tree tmp = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp, $4, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE_2, $2, $4, NULL, NULL, NULL);
     }
 	| T_MINUS const_value T_DOTDOT T_MINUS const_value
     {
         cst_tree tmp1 = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
         cst_tree tmp2 = create_node(T_MINUS, FACTOR_8, $5, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp1, tmp2, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE_3, tmp1, tmp2, NULL, NULL, NULL);
     }
 	| S_ID T_DOTDOT S_ID
     {
-        cst_tree tmp1 = create_node($1, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
-        cst_tree tmp2 = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, SIMPLE_TYPE_DECL, tmp1, tmp2, NULL, NULL, NULL);
+        cst_tree tmp1 = create_node($1, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp2 = create_node($3, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE_4, tmp1, tmp2, NULL, NULL, NULL);
     };
 
 array_type_decl : T_ARRAY T_LB simple_type_decl T_RB T_OF type_decl
@@ -463,7 +463,7 @@ assign_stmt : S_ID T_ASSIGN expression      // id = 3
     }
 	| S_ID T_DOT S_ID T_ASSIGN expression       // id.key = 10
     {
-        cst_tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp = create_node($3, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
         $$ = create_node($1, ASSIGN_STMT_3, tmp, $5, NULL, NULL, NULL);
     };
 
@@ -711,7 +711,7 @@ factor : S_ID
 	}
 	| S_ID T_DOT S_ID
 	{
-        cst_tree tmp = create_node($3, SIMPLE_TYPE_DECL, NULL, NULL, NULL, NULL, NULL);
+        cst_tree tmp = create_node($3, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
 		$$ = create_node($1, FACTOR_10, tmp, NULL, NULL, NULL, NULL);
 	};
 

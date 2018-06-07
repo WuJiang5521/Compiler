@@ -137,7 +137,7 @@ LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     this->label = label;
 }
 
-//IfStm::IfStm() : Stm(N_IF_STM) {}
+IfStm::IfStm() : Stm(N_IF_STM) {}
 
 void IfStm::setCondition(Exp *cond) {
     condition = cond;
@@ -167,7 +167,7 @@ WhileStm::WhileStm(Exp *cond) : Stm(N_WHILE_STM) {
     condition = cond;
 }
 
-//RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
+RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
 
 void RepeatStm::setCondition(Exp *cond) {
     if (condition == nullptr) condition = cond;

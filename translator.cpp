@@ -338,10 +338,21 @@ Base* Translator::translate(cst_tree tree) {
             }
         }
 
-        // only used in translating sys_type
-        case SIMPLE_TYPE_DECL:
+        case SIMPLE_TYPE_DECL_1:
         {
             return (Base*)translate(tree->first);
+        }
+
+        // user defined type
+        case SIMPLE_TYPE_DECL_2:
+        {
+            //Type* type = findType(lookup_string(tree->item), tree);
+            //return (Base*)type;
+        }
+
+        case SIMPLE_TYPE_DECL_3:
+        {
+            // TODO what's this?
         }
 
         case TYPE_DECL:
@@ -351,11 +362,36 @@ Base* Translator::translate(cst_tree tree) {
 
         case ARRAY_TYPE_DECL:
         {
-            Type* type = (Type*)translate(tree->second);
+            Type* element_type = (Type*)translate(tree->second);
             cst_tree simple_type_decl_ptr = tree->first;
-            //type->array_start = 
-            // TODO
-            return (Base*)type;
+            Type* array_type = new Type();
+            int first_value = 0;
+            int second_value = 0;
+            switch (simple_type_decl_ptr->node_id) {
+                case ARRAY_RANGE_1:
+                    first_value = ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
+                    second_value = ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    break;
+                case ARRAY_RANGE_2:
+                    first_value = -1 * ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
+                    second_value = ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    break;
+                case ARRAY_RANGE_3:
+                    first_value = -1 * ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
+                    second_value = -1 * ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    break;
+                case ARRAY_RANGE_4:
+                    // TODO a[b..c]
+                    break;
+            }
+
+            array_type->array_start = first_value;
+            array_type->array_end = second_value;
+            array_type->base_type = 5;
+
+            //addType(array_type);
+
+            return (Base*)array_type;
         }
 
         case RECORD_TYPE_DECL:
@@ -375,7 +411,7 @@ Base* Translator::translate(cst_tree tree) {
                 }
                 field_decl_list_ptr = field_decl_list_ptr->first;
             }
-
+            return (Base*)type;
         }
 
         case STMT:

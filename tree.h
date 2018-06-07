@@ -253,7 +253,7 @@ public:
     Body *true_do = new Body(); // cannot be nullptr
     Body *false_do = nullptr; // can be nullptr
 
-    IfStm() = default;
+    IfStm();
 
     void setCondition(Exp *);
 
@@ -293,7 +293,7 @@ public:
     Exp *condition = nullptr;
     Body *loop = new Body();
 
-    RepeatStm() = default;
+    RepeatStm();
 
     void setCondition(Exp *);
 };
