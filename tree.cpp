@@ -348,13 +348,13 @@ std::string getString(Base *ori_node) {
             case N_PROGRAM: {
                 auto *node = (Program *) ori_node;
                 str.append("{");
-                str.append("name:\"");
+                str.append("\"name\":\"");
                 str.append(node->name);
                 str.append("\",");
-                str.append("define:");
+                str.append("\"define\":");
                 str.append(getString(node->define));
                 str.append(",");
-                str.append("body:");
+                str.append("\"body\":");
                 str.append(getString(node->body));
                 str.append(",}");
             }
@@ -362,31 +362,31 @@ std::string getString(Base *ori_node) {
             case N_DEFINE: {
                 auto *node = (Define *) ori_node;
                 str.append("{");
-                str.append("label: [");
+                str.append("\"label\": [");
                 for (auto stm: node->label_def) {
                     str.append(getString(stm));
                     str.append(",");
                 }
                 str.append("],");
-                str.append("const: [");
+                str.append("\"const\": [");
                 for (auto stm: node->const_def) {
                     str.append(getString(stm));
                     str.append(",");
                 }
                 str.append("],");
-                str.append("type: [");
+                str.append("\"type\": [");
                 for (auto stm: node->type_def) {
                     str.append(getString(stm));
                     str.append(",");
                 }
                 str.append("],");
-                str.append("var: [");
+                str.append("\"var\": [");
                 for (auto stm: node->var_def) {
                     str.append(getString(stm));
                     str.append(",");
                 }
                 str.append("],");
-                str.append("function: [");
+                str.append("\"function\": [");
                 for (auto stm: node->function_def) {
                     str.append(getString(stm));
                     str.append(",");
@@ -407,19 +407,19 @@ std::string getString(Base *ori_node) {
                 break;
             case N_SITUATION: {
                 auto *node = (Situation *) ori_node;
-                str.append("{match_list:[");
+                str.append("{\"match_list\":[");
                 for (auto match_item: node->match_list) {
                     str.append(getString(match_item));
                     str.append(",");
                 }
-                str.append("], to_do:");
+                str.append("], \"to_do\":");
                 str.append(getString(node->solution));
                 str.append("}");
             }
                 break;
             case N_LABEL_DEF: {
                 auto *node = (LabelDef *) ori_node;
-                str.append("{label_def: ");
+                str.append("{\"label_def\": ");
                 char id[100];
                 sprintf(id, "%d", node->label_index);
                 str.append(id);
@@ -428,74 +428,74 @@ std::string getString(Base *ori_node) {
                 break;
             case N_CONST_DEF: {
                 auto *node = (ConstDef *) ori_node;
-                str.append("{const_name: \"");
+                str.append("{\"const_name\": \"");
                 str.append(node->name);
-                str.append("\", const_value: ");
+                str.append("\", \"const_value\": ");
                 str.append(getString(node->value));
                 str.append("}");
             }
                 break;
             case N_TYPE_DEF: {
                 auto *node = (TypeDef *) ori_node;
-                str.append("{type_name: \"");
+                str.append("{\"type_name\": \"");
                 str.append(node->name);
-                str.append("\", structure: ");
+                str.append("\", \"structure\": ");
                 str.append(getString(node->type));
                 str.append("}");
             }
                 break;
             case N_VAR_DEF: {
                 auto *node = (VarDef *) ori_node;
-                str.append("{var_name: \"");
+                str.append("{\"var_name\": \"");
                 str.append(node->name);
-                str.append("\", structure: ");
+                str.append("\", \"structure\": ");
                 str.append(getString(node->type));
                 str.append("}");
             }
                 break;
             case N_FUNCTION_DEF: {
                 auto *node = (FunctionDef *) ori_node;
-                str.append("{func_name: \"");
+                str.append("{\"func_name\": \"");
                 str.append(node->name);
-                str.append("\", args: [");
+                str.append("\", \"args\": [");
                 for (int i = 0; i < node->args_name.size(); i++) {
-                    str.append("{arg_name:\"");
+                    str.append("{\"arg_name\":\"");
                     str.append(node->args_name[i]);
-                    str.append("\", arg_type:");
+                    str.append("\", \"arg_type\":");
                     str.append(getString(node->args_type[i]));
-                    str.append("\", arg_is_formal_parameter:");
+                    str.append("\", \"arg_is_formal_parameter\":");
                     str.append(node->args_is_formal_parameters[i] ? "true" : "false");
                     str.append("},");
                 }
                 str.append("]");
                 if (node->rtn_type != nullptr) {
-                    str.append(", return_type: ");
+                    str.append(", \"return_type\": ");
                     str.append(getString(node->rtn_type));
                 }
                 if (node->define != nullptr) {
-                    str.append(", defines: ");
+                    str.append(", \"defines\": ");
                     str.append(getString(node->define));
                 }
-                str.append(", body: ");
+                str.append(", \"body\": ");
                 str.append(getString(node->body));
                 str.append("}");
             }
                 break;
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
-                str.append("{left:\"");
+                str.append("{\"left\":\"");
                 // TODO only support a=1
                 //str.append(node->left_value);
-                str.append("\",right:");
+                str.append("\",\"right\":");
                 str.append(getString(node->right_value));
                 str.append("}");
             }
                 break;
             case N_CALL_STM: {
                 auto *node = (CallStm *) ori_node;
-                str.append("{func:\"");
+                str.append("{\"func\":\"");
                 str.append(node->name);
-                str.append("\",args:[");
+                str.append("\",\"args\":[");
                 for (auto arg: node->args) {
                     str.append(getString(arg));
                     str.append(",");
@@ -505,9 +505,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_CASE_STM: {
                 auto *node = (CaseStm *) ori_node;
-                str.append("{switch_item:\"");
+                str.append("{\"switch_item\":\"");
                 str.append(getString(node->object));
-                str.append("\",situations:[");
+                str.append("\",\"situations\":[");
                 for (auto situation: node->situations) {
                     str.append(getString(situation));
                     str.append(",");
@@ -517,23 +517,23 @@ std::string getString(Base *ori_node) {
                 break;
             case N_FOR_STM: {
                 auto *node = (ForStm *) ori_node;
-                str.append("{iter:\"");
+                str.append("{\"iter\":\"");
                 str.append(node->iter);
-                str.append("\",start:");
+                str.append("\",\"start\":");
                 str.append(getString(node->start));
-                str.append(",end:");
+                str.append(",\"end\":");
                 str.append(getString(node->end));
-                str.append(",step:");
+                str.append(",\"step\":");
                 if (node->step == 1) str.append("1");
                 else str.append("-1");
-                str.append(",body:");
+                str.append(",\"body\":");
                 str.append(getString(node->loop));
                 str.append("]}");
             }
                 break;
             case N_GOTO_STM: {
                 auto *node = (GotoStm *) ori_node;
-                str.append("{goto:");
+                str.append("{\"goto\":");
                 char label[100];
                 sprintf(label, "%d", node->label);
                 str.append(label);
@@ -542,12 +542,12 @@ std::string getString(Base *ori_node) {
                 break;
             case N_IF_STM: {
                 auto *node = (IfStm *) ori_node;
-                str.append("{condition:");
+                str.append("{\"condition\":");
                 str.append(getString(node->condition));
-                str.append(",true_body:");
+                str.append(",\"true_body\":");
                 str.append(getString(node->true_do));
                 if (node->false_do != nullptr) {
-                    str.append(",false_body:");
+                    str.append(",\"false_body\":");
                     str.append(getString(node->false_do));
                 }
                 str.append("}");
@@ -555,7 +555,7 @@ std::string getString(Base *ori_node) {
                 break;
             case N_LABEL_STM: {
                 auto *node = (LabelStm *) ori_node;
-                str.append("{label: ");
+                str.append("{\"label\": ");
                 char id[100];
                 sprintf(id, "%d", node->label);
                 str.append(id);
@@ -564,38 +564,38 @@ std::string getString(Base *ori_node) {
                 break;
             case N_REPEAT_STM: {
                 auto *node = (RepeatStm *) ori_node;
-                str.append("{body:");
+                str.append("{\"body\":");
                 str.append(getString(node->loop));
-                str.append(",condition:");
+                str.append(",\"condition\":");
                 str.append(getString(node->condition));
                 str.append("}");
             }
                 break;
             case N_WHILE_STM: {
                 auto *node = (WhileStm *) ori_node;
-                str.append("{condition:");
+                str.append("{\"condition\":");
                 str.append(getString(node->condition));
-                str.append(",body:");
+                str.append(",\"body\":");
                 str.append(getString(node->loop));
                 str.append("}");
             }
                 break;
             case N_BINARY_EXP: {
                 auto *node = (BinaryExp *) ori_node;
-                str.append("{bin_op:\"");
+                str.append("{\"bin_op\":\"");
                 str.append(getOpNameByID(node->op_code));
-                str.append("\",operand1:");
+                str.append("\",\"operand1\":");
                 str.append(getString(node->operand1));
-                str.append("\",operand2:");
+                str.append("\",\"operand2\":");
                 str.append(getString(node->operand2));
                 str.append("}");
             }
                 break;
             case N_CALL_EXP: {
                 auto *node = (CallExp *) ori_node;
-                str.append("{func:\"");
+                str.append("{\"func\":\"");
                 str.append(node->name);
-                str.append("\",args:[");
+                str.append("\",\"args\":[");
                 for (auto arg: node->args) {
                     str.append(getString(arg));
                     str.append(",");
@@ -605,23 +605,23 @@ std::string getString(Base *ori_node) {
                 break;
             case N_CONSTANT_EXP: {
                 auto *node = (ConstantExp *) ori_node;
-                str.append("{const_value:");
+                str.append("{\"const_value\":");
                 str.append(getString(node->value));
                 str.append("}");
             }
                 break;
             case N_UNARY_EXP: {
                 auto *node = (UnaryExp *) ori_node;
-                str.append("{mon_op:\"");
+                str.append("{\"mon_op\":\"");
                 str.append(getOpNameByID(node->op_code));
-                str.append("\",operand:");
+                str.append("\",\"operand\":");
                 str.append(getString(node->operand));
                 str.append("}");
             }
                 break;
             case N_VARIABLE_EXP: {
                 auto *node = (VariableExp *) ori_node;
-                str.append("{var_name:\"");
+                str.append("{\"var_name\":\"");
                 str.append(node->name);
                 str.append("\"}");
             }
@@ -646,24 +646,24 @@ std::string getString(Base *ori_node) {
                     }
                         break;
                     case TY_ARRAY: {
-                        str.append("{type:\"array\",start_index:");
+                        str.append("{\"type\":\"array\",\"start_index\":");
                         char num[100];
                         sprintf(num, "%d", node->array_start);
                         str.append(num);
-                        str.append(",end_index:");
+                        str.append(",\"end_index\":");
                         sprintf(num, "%d", node->array_end);
                         str.append(num);
-                        str.append(",child_type:");
+                        str.append(",\"child_type\":");
                         str.append(getString(node->child_type[0]));
                         str.append("}");
                     }
                         break;
                     case TY_RECORD: {
-                        str.append("{type:\"record\",child_type:[");
+                        str.append("{\"type\":\"record\",\"child_type\":[");
                         for (auto child: node->child_type) {
-                            str.append("{name:\"");
+                            str.append("{\"name\":\"");
                             str.append(child->name);
-                            str.append("\", type:");
+                            str.append("\", \"type\":");
                             str.append(getString(child));
                             str.append("},");
                         }
