@@ -10,6 +10,7 @@
  */
 
 #include <cstddef>
+#include <iostream>
 #include "translator.h"
 #include "spl.tab.h"
 #include "cst.h"
@@ -41,7 +42,8 @@ int lookup_type(int index) {
     return symtab[index].type;
 }
 
-Base* Translator::translate(cst_tree tree) {
+// Base* ast_tree has a default value. Ignore it.
+Base* Translator::translate(cst_tree tree, Base* ast_tree) {
     switch(tree->node_id) {
         case PROGRAM:
         {
@@ -143,7 +145,7 @@ Base* Translator::translate(cst_tree tree) {
                     var_decl_list_ptr = var_decl_list_ptr->first;
                 }
                 cst_tree var_decl_ptr = var_decl_list_ptr->first;
-                Type* type = (Type*)translate(var_decl_ptr->second);
+                Type* type = (Type*)translate(var_decl_ptr->second, define);        // define is the parent node, findType need it
                 cst_tree name_list_ptr = var_decl_ptr->first;
                 do {
                     std::string name = lookup_string(name_list_ptr->item);
@@ -348,8 +350,9 @@ Base* Translator::translate(cst_tree tree) {
         // user defined type
         case SIMPLE_TYPE_DECL_2:
         {
-            //Type* type = findType(lookup_string(tree->item), tree);
-            //return (Base*)type;
+            std::cout << lookup_string(tree->item);
+            Type* type = ast::findType(lookup_string(tree->item), ast_tree);
+            return (Base*)type;
         }
 
         case SIMPLE_TYPE_DECL_3:
@@ -359,7 +362,7 @@ Base* Translator::translate(cst_tree tree) {
 
         case TYPE_DECL:
         {
-            return (Base*)translate(tree->first);
+            return (Base*)translate(tree->first, ast_tree);     // ast_tree stores the pointer to 'define', which is the parent node, findType needs it
         }
 
         case ARRAY_TYPE_DECL:
@@ -371,16 +374,16 @@ Base* Translator::translate(cst_tree tree) {
             int second_value = 0;
             switch (simple_type_decl_ptr->node_id) {
                 case ARRAY_RANGE_1:
-                    first_value = ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
-                    second_value = ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    first_value = ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
+                    second_value = ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
                     break;
                 case ARRAY_RANGE_2:
-                    first_value = -1 * ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
-                    second_value = ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    first_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
+                    second_value = ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
                     break;
                 case ARRAY_RANGE_3:
-                    first_value = -1 * ((Value*)translate(simple_type_decl_ptr->first))->val.integer_value;
-                    second_value = -1 * ((Value*)translate(simple_type_decl_ptr->second))->val.integer_value;
+                    first_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
+                    second_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
                     break;
                 case ARRAY_RANGE_4:
                     // TODO a[b..c]
@@ -389,7 +392,8 @@ Base* Translator::translate(cst_tree tree) {
 
             array_type->array_start = first_value;
             array_type->array_end = second_value;
-            array_type->base_type = 5;
+            array_type->base_type = TY_ARRAY;
+            array_type->child_type.push_back(element_type);
 
             //addType(array_type);
 
@@ -592,7 +596,8 @@ Base* Translator::translate(cst_tree tree) {
             Body* false_do = (Body*)translate(tree->third);
 
             IfStm* ifStm = new IfStm();
-            ifStm->condition = condition;
+            ifStm->setCondition(condition);
+            ifStm->addFalse();
             ifStm->true_do = true_do;
             ifStm->false_do = false_do;
 
@@ -619,7 +624,7 @@ Base* Translator::translate(cst_tree tree) {
             Exp* condition = (Exp*)translate(tree->second);
 
             RepeatStm* repeatStm = new RepeatStm();
-            repeatStm->condition = condition;
+            repeatStm->setCondition(condition);
             cst_tree stmt_list_ptr = tree->first;
             Body* tmp_body = (Body*)translate(stmt_list_ptr);
             repeatStm->loop = tmp_body;

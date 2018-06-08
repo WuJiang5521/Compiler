@@ -1,6 +1,7 @@
 %{
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "cst.h"
 #include "symtab.h"
 #include "spl.tab.h"
@@ -113,6 +114,10 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 
 // 
 int installId(char* id, unsigned type = -1) {
+    // convert to lower case
+    char lower_id[100];
+    strcpy(lower_id, id);
+    for (char* p = lower_id; *p; p++) *p = tolower(*p);
     extern sym_tab_node symtab[];
     extern int currentSymTabSize;
     int result = lookup(id);
@@ -128,6 +133,11 @@ int installId(char* id, unsigned type = -1) {
     }
 }
 int lookup(char* id) {
+    // convert to lower case
+    char lower_id[100];
+    strcpy(lower_id, id);
+    for (char* p = lower_id; *p; p++) *p = tolower(*p);
+
     extern sym_tab_node symtab[];
     extern int currentSymTabSize;
     for (int i = 0; i < currentSymTabSize; i++) {

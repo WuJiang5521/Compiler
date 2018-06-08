@@ -11,7 +11,7 @@ all:
 front:
 	flex spl.l
 	bison -d spl.y
-	clang++ -g -std=c++11 lex.yy.c spl.tab.c cst.cpp translator.cpp tree.cpp common.cpp -lfl -o tester
+	clang++ -g -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 lex.yy.c spl.tab.c cst.cpp translator.cpp tree.cpp common.cpp -lfl
 
 clean:
 	rm lex.yy.c spl.tab.* *.json a.out

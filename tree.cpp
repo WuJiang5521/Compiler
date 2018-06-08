@@ -638,16 +638,29 @@ std::string getString(Base *ori_node) {
     return str;
 }
 
-void printTree(std::string filename, Base *root) {
+void ast::printTree(std::string filename, Base *root) {
     std::string str = getString(root);
     std::ofstream SaveFile(filename + ".json");
     SaveFile << str;
     SaveFile.close();
 }
 
+/*
 Type *copyType(Type *origin) {
     Type *copy = new Type();
     copy->name = origin->name;
+    copy->array_start = origin->array_start;
+    copy->array_end = origin->array_end;
+    copy->child_type.clear();
+    for (Type *iter: origin->child_type)
+        copy->child_type.push_back(copyType(iter));
+    return copy;
+}
+*/
+Type *copyType(Type *origin) {
+    Type *copy = new Type();
+    copy->name = origin->name;
+    copy->base_type = origin->base_type;
     copy->array_start = origin->array_start;
     copy->array_end = origin->array_end;
     copy->child_type.clear();
