@@ -15,6 +15,7 @@ void yyerror(const char *info) {
 Type *copyType(Type *origin) {
     Type *copy = new Type();
     copy->name = origin->name;
+    copy->base_type = origin->base_type;
     copy->array_start = origin->array_start;
     copy->array_end = origin->array_end;
     copy->child_type.clear();
