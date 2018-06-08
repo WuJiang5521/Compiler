@@ -11,39 +11,6 @@
 #include <vector>
 #include "common.h"
 
-// node type
-#define N_PROGRAM 0
-#define N_DEFINE 1
-#define N_BODY 2
-#define N_SITUATION 3
-#define N_LABEL_DEF 10
-#define N_CONST_DEF 11
-#define N_TYPE_DEF 12
-#define N_VAR_DEF 13
-#define N_FUNCTION_DEF 14
-#define N_ASSIGN_STM 20
-#define N_CALL_STM 21
-#define N_CASE_STM 22
-#define N_FOR_STM 23
-#define N_GOTO_STM 24
-#define N_IF_STM 25
-#define N_LABEL_STM 26
-#define N_REPEAT_STM 27
-#define N_WHILE_STM 28
-#define N_BINARY_EXP 40
-#define N_CALL_EXP 41
-#define N_CONSTANT_EXP 42
-#define N_UNARY_EXP 43
-#define N_VARIABLE_EXP 44
-#define N_TYPE 50
-// type code
-#define TY_INTEGER 0
-#define TY_REAL 1
-#define TY_CHAR 2
-#define TY_BOOLEAN 3
-#define TY_ARRAY 4
-#define TY_RECORD 5
-
 //codegen
 class CodeGenContext;
 
@@ -92,10 +59,12 @@ class Base {
 public:
     int node_type;
     Base *father = nullptr;
+    bool is_legal = true;
 
     explicit Base(int type = 0);
 
     virtual llvm::Value* codeGen(CodeGenContext& context) = 0;
+    virtual bool checkSemantics() = 0;
 };
 
 class Stm : public Base {
@@ -124,6 +93,7 @@ public:
     void addStm(Stm *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class ExpList : public Base {
@@ -143,6 +113,7 @@ public:
     void addDefine(Define *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class Define : public Base {
@@ -166,6 +137,7 @@ public:
     void addFunction(FunctionDef *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class LabelDef : public Base {
@@ -175,6 +147,7 @@ public:
     explicit LabelDef(int);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class ConstDef : public Base {
@@ -185,6 +158,7 @@ public:
     ConstDef(const std::string &, Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class TypeDef : public Base {
@@ -195,6 +169,7 @@ public:
     TypeDef(const std::string &, Type *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class VarDef : public Base {
@@ -206,6 +181,7 @@ public:
     VarDef(const std::string &, Type *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class FunctionDef : public Base {
@@ -227,6 +203,7 @@ public:
     void addDefine(Define *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class AssignStm : public Stm {
@@ -237,6 +214,7 @@ public:
     AssignStm(Exp*, Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class CallStm : public Stm {
@@ -249,6 +227,7 @@ public:
     void addArgs(Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class LabelStm : public Stm {
@@ -258,6 +237,7 @@ public:
     explicit LabelStm(const int &);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class IfStm : public Stm {
@@ -273,6 +253,7 @@ public:
     void addFalse();
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class Situation : public Base {
@@ -285,6 +266,7 @@ public:
     void addMatch(Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class CaseStm : public Stm {
@@ -297,6 +279,7 @@ public:
     void addSituation(Situation *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class ForStm : public Stm {
@@ -309,6 +292,7 @@ public:
     ForStm(const std::string &, Exp *, Exp *, int);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class WhileStm : public Stm {
@@ -319,6 +303,7 @@ public:
     explicit WhileStm(Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class RepeatStm : public Stm {
@@ -331,6 +316,7 @@ public:
     void setCondition(Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class GotoStm : public Stm {
@@ -340,6 +326,7 @@ public:
     explicit GotoStm(int label);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class UnaryExp: public Exp {
@@ -350,6 +337,7 @@ public:
     UnaryExp(int, Exp*);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class BinaryExp : public Exp {
@@ -360,6 +348,7 @@ public:
     BinaryExp(int, Exp *, Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class CallExp : public Exp {
@@ -372,6 +361,7 @@ public:
     void addArgs(Exp *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class ConstantExp : public Exp {
@@ -381,6 +371,7 @@ public:
     explicit ConstantExp(Value *);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class VariableExp : public Exp {
@@ -390,6 +381,7 @@ public:
     explicit VariableExp(const std::string &);
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+    bool checkSemantics();
 };
 
 class Type : public Base {
