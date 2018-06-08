@@ -7,11 +7,6 @@
 
 using namespace ast;
 
-void yyerror(const char *info) {
-    fprintf(stderr, "Semantics error: %s\n", s);
-    exit(1);
-}
-
 Type *copyType(Type *origin) {
     Type *copy = new Type();
     copy->name = origin->name;
@@ -24,36 +19,93 @@ Type *copyType(Type *origin) {
     return copy;
 }
 
-Type *ast::findType(const std::string &type_name, Base *node) {
+Base *ast::findName(const std::string &name, ast::Base *node) {
     switch (node->node_type) {
-        case N_PROGRAM:
-            return findType(type_name, ((Program *) node)->define);
-        case N_FUNCTION_DEF: {
-            Type *local = findType(type_name, ((FunctionDef *) node)->define);
-            if (local == nullptr) return findType(type_name, node->father);
-            else return local;
-        }
-        case N_DEFINE: {
-            Define *d_node = (Define *) node;
-            for (TypeDef *iter: d_node->type_def) {
-                Type *result = findType(type_name, iter);
-                if (result != nullptr) return result;
-            }
+        case N_PROGRAM: {
+            Define *d_node = ((Program *) node)->define;
+            for (ConstDef *iter: d_node->const_def)
+                if (iter->name == name) return iter;
+            for (TypeDef *iter: d_node->type_def)
+                if (iter->name == name) return iter;
+            for (VarDef *iter: d_node->var_def)
+                if (iter->name == name) return iter;
+            for (FunctionDef *iter: d_node->function_def)
+                if (iter->name == name) return iter;
             return nullptr;
         }
-        case N_TYPE_DEF: {
-            TypeDef *td_node = (TypeDef *) node;
-            if (td_node->name == type_name) return copyType(td_node->type);
-            else return nullptr;
+        case N_FUNCTION_DEF: {
+            FunctionDef *f_node = (FunctionDef *) node;
+            if (f_node->name == name) return f_node;
+            for (int i = 0; i < f_node->args_name.size(); i++)
+                if (f_node->args_name[i] == name) return new ArgDef(f_node->args_type[i]);
+            Define *d_node = f_node->define;
+            for (ConstDef *iter: d_node->const_def)
+                if(iter->name == name) return iter;
+            for (TypeDef *iter: d_node->type_def)
+                if(iter->name == name) return iter;
+            for (VarDef *iter: d_node->var_def)
+                if(iter->name == name) return iter;
+            for (FunctionDef *iter: d_node->function_def)
+                if(iter->name == name) return iter;
+            return findName(type_name, node->father);
         }
-        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
+        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_TYPE_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
         case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
         case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP: case N_CONSTANT_EXP:
-        case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
-            return findType(type_name, node->father);
+        case N_DEFINE: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
+            return findName(name, node->father);
         default:
             return nullptr;
     }
+}
+
+bool canFindLabel(const int &label, Base *node) {
+    switch (node->node_type) {
+        case N_PROGRAM: {
+            Define *d_node = ((Program *)node)->define;
+            for (LabelDef *iter: d_node->label_def)
+                if(iter->label_index == label) return true;
+            return false;
+        }
+        case N_FUNCTION_DEF: {
+            Define *d_node = ((FunctionDef *) node)->define;
+            for (LabelDef *iter: d_node->label_def)
+                if(iter->label_index == label) return true;
+            return canFindLabel(label, node->father);
+        }
+        case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_TYPE_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
+        case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
+        case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP: case N_CONSTANT_EXP:
+        case N_DEFINE: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
+            return canFindLabel(label, node->father);
+        default:
+            return false;
+    }
+}
+
+ConstDef *findConst(const std::string &type_name, Base *node) {
+    Base *result = findName(type_name, node);
+    if(result->node_type == N_CONST_DEF) return (ConstDef*)result;
+    else return nullptr;
+}
+
+Type *ast::findType(const std::string &type_name, Base *node) {
+    Base *result = findName(type_name, node);
+    if(result->node_type == N_TYPE_DEF) return ((TypeDef*)result)->type;
+    else return nullptr;
+}
+
+Type *findVar(const std::string &type_name, Base *node) {
+    Base *result = findName(type_name, node);
+    if(result->node_type == N_VAR_DEF) return ((VarDef*)result)->type;
+    else if (result->node_type == N_ARG_DEF) return ((ArgDef*)result)->type;
+    else return nullptr;
+}
+
+FunctionDef *findFunction(const std::string &type_name, Base *node) {
+    Base *result = findName(type_name, node);
+    if(result->node_type == N_FUNCTION_DEF) return (FunctionDef*)result;
+    else return nullptr;
 }
 
 Base::Base(int type) {
@@ -288,6 +340,7 @@ void CallExp::addArgs(Exp *exp) {
 
 ConstantExp::ConstantExp(Value *val) : Exp(N_CONSTANT_EXP) {
     value = val;
+    rtn_value = val;
 }
 
 VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {

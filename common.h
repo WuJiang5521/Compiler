@@ -49,6 +49,7 @@
 #define N_TYPE_DEF 12
 #define N_VAR_DEF 13
 #define N_FUNCTION_DEF 14
+#define N_ARG_DEF 15
 #define N_ASSIGN_STM 20
 #define N_CALL_STM 21
 #define N_CASE_STM 22
