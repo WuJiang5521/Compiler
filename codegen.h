@@ -51,6 +51,8 @@ public:
     std::map<Function*,Function*> parent;
     Function* currentFunction;
     
+    llvm::BasicBlock* labelBlock[10000];
+    
     
     CodeGenContext() { module = new Module("main", MyContext); }
     

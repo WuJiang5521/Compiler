@@ -1,0 +1,46 @@
+#include <iostream>
+
+#include "tree.h"
+#include "translator.h"
+#include "cst.h"
+#include "parser.hpp"
+#include "codegen.h"
+
+using namespace std;
+
+extern int yyparse();
+extern ast::Program* ast_root;
+
+std::string red(const std::string& str) {
+	string red_b = "\033[1;31m";
+	string red_e = "\033[0m";
+	return red_b + str + red_e;
+}
+std::string green(const std::string& str) {
+	string red_b = "\033[1;32m";
+	string red_e = "\033[0m";
+	return red_b + str + red_e;
+}
+
+int main(int argc, char** argv) {
+	yyparse();
+	extern int parseError;
+	if (parseError) return 0;
+	  cout << green("syntax check success!") << endl;
+	//cout << ast_root << endl;
+	//ast_root->print_node("", true, true);
+	InitializeNativeTarget();
+	CodeGenContext context;
+	//createCoreFunctions(context);
+	try {
+		context.generateCode(*ast_root);
+		context.runCode();
+	} catch (const std::domain_error &de) {
+		cout << red(de.what()) << endl;		
+	} catch (const std::logic_error &le) {
+		cout << red(le.what()) << endl;	
+	} catch (...) {
+		cout << "other uncaught error" << endl;
+	}
+	return 0;
+}

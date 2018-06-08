@@ -302,7 +302,7 @@ Base* Translator::translate(cst_tree tree) {
 
         case SYS_TYPE:
         {
-            Type* type = new Type();
+            ast::Type* type = new ast::Type();
             switch (tree->item) {
                 case T_CHAR:
                     type->base_type = 2;
@@ -341,7 +341,7 @@ Base* Translator::translate(cst_tree tree) {
 
         case RECORD_TYPE_DECL:
         {
-            Type* type = new Type();
+            ast::Type* type = new ast::Type();
             type->base_type = 6;
             cst_tree field_decl_list_ptr = tree->first;
             while (field_decl_list_ptr->second != nullptr) {

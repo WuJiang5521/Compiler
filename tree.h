@@ -30,22 +30,19 @@
 #define N_LABEL_STM 26
 #define N_REPEAT_STM 27
 #define N_WHILE_STM 28
-#define N_WITH_STM 29
 #define N_BINARY_EXP 40
 #define N_CALL_EXP 41
 #define N_CONSTANT_EXP 42
-#define N_MEMORY_EXP 43
-#define N_UNARY_EXP 44
-#define N_VARIABLE_EXP 45
+#define N_UNARY_EXP 43
+#define N_VARIABLE_EXP 44
 #define N_TYPE 50
 // type code
 #define TY_INTEGER 0
 #define TY_REAL 1
 #define TY_CHAR 2
 #define TY_BOOLEAN 3
-#define TY_SET 4
-#define TY_ARRAY 5
-#define TY_RECORD 6
+#define TY_ARRAY 4
+#define TY_RECORD 5
 
 //codegen
 class CodeGenContext;
@@ -77,7 +74,6 @@ class IfStm;
 class LabelStm;
 class RepeatStm;
 class WhileStm;
-class WithStm;
 // exp
 class UnaryExp;
 class BinaryExp;
@@ -87,27 +83,25 @@ class VariableExp;
 class MemoryExp;
 // type
 class Type;
-
 //value
 class Value;
-
-
 
 
 // define
 class Base {
 public:
     int node_type;
+    Base *father = nullptr;
 
     explicit Base(int type = 0);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context) = 0;
 };
 
 class Stm : public Base {
 public:
     explicit Stm(int type = 0);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -117,7 +111,7 @@ public:
     Type *return_type;
 
     explicit Exp(int type = 0);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -128,7 +122,7 @@ public:
     Body();
 
     void addStm(Stm *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -136,8 +130,6 @@ class ExpList : public Base {
 public:
     std::vector<Exp *> exps;
     void addExp(Exp*);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class Program : public Base {
@@ -149,7 +141,7 @@ public:
     explicit Program(const std::string &);
 
     void addDefine(Define *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -172,7 +164,7 @@ public:
     void addVar(VarDef *);
 
     void addFunction(FunctionDef *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -181,7 +173,7 @@ public:
     int label_index;
 
     explicit LabelDef(int);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -191,7 +183,7 @@ public:
     Exp *value = nullptr; // cannot be nullptr
 
     ConstDef(const std::string &, Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -201,7 +193,7 @@ public:
     Type *type = nullptr; // cannot be nullptr
 
     TypeDef(const std::string &, Type *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -209,13 +201,10 @@ class VarDef : public Base {
 public:
     std::string name;
     Type *type = nullptr; // cannot be null
-    Value *initializing_value = nullptr; // can be null
     bool is_global = false;
 
     VarDef(const std::string &, Type *);
 
-    VarDef(const std::string &, Type *, Value *);
-    
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -236,7 +225,7 @@ public:
     void setReturnType(Type *);
 
     void addDefine(Define *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -246,17 +235,7 @@ public:
     Exp *right_value;
 
     AssignStm(Exp*, Exp *);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
 
-class WithStm : public Stm {
-public:
-    std::string name;
-    Body *body = new Body();
-
-    explicit WithStm(const std::string &);
-    
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -268,7 +247,7 @@ public:
     explicit CallStm(const std::string &);
 
     void addArgs(Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -277,7 +256,7 @@ public:
     int label;
 
     explicit LabelStm(const int &);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -287,12 +266,12 @@ public:
     Body *true_do = new Body(); // cannot be nullptr
     Body *false_do = nullptr; // can be nullptr
 
-    IfStm() = default;
+    IfStm();
 
     void setCondition(Exp *);
 
     void addFalse();
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -304,7 +283,7 @@ public:
     Situation();
 
     void addMatch(Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -316,7 +295,7 @@ public:
     explicit CaseStm(Exp *);
 
     void addSituation(Situation *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -328,7 +307,7 @@ public:
     Body *loop = new Body();
 
     ForStm(const std::string &, Exp *, Exp *, int);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -338,7 +317,7 @@ public:
     Body *loop = new Body();
 
     explicit WhileStm(Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -347,10 +326,10 @@ public:
     Exp *condition = nullptr;
     Body *loop = new Body();
 
-    RepeatStm() = default;
+    RepeatStm();
 
     void setCondition(Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -359,10 +338,9 @@ public:
     int label;
 
     explicit GotoStm(int label);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
-
 
 class UnaryExp: public Exp {
 public:
@@ -370,7 +348,7 @@ public:
     Exp *operand;
 
     UnaryExp(int, Exp*);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -380,7 +358,7 @@ public:
     Exp *operand1, *operand2;
 
     BinaryExp(int, Exp *, Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -392,7 +370,7 @@ public:
     explicit CallExp(const std::string &);
 
     void addArgs(Exp *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -401,7 +379,7 @@ public:
     Value *value;
 
     explicit ConstantExp(Value *);
-    
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -410,16 +388,7 @@ public:
     std::string name;
 
     explicit VariableExp(const std::string &);
-    
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
 
-class MemoryExp : public Exp {
-public:
-    ADDRESS address;
-
-    explicit MemoryExp(ADDRESS address);
-    
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -432,8 +401,8 @@ public:
     std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
 
     Type();
-    
-    llvm::Type* toLLVMType(void);
+
+    llvm::Type* toLLVMType(CodeGenContext& context);
 };
 
 class Value {
@@ -454,12 +423,7 @@ public:
 // example: printTree("log", new Program())
 void printTree(std::string filename, Base *root);
 
-// example: addType(new Type())
-void addType(Type *type);
-
 // example: Type *type = findType("arr");
-Type *findType(std::string type_name);
-
-//extern std::vector<Type *> type_list;
+Type *findType(const std::string &type_name, Base *node);
 }
 #endif //SPLCOMPILER_TREE_H
