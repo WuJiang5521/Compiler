@@ -38,6 +38,8 @@
 #define OP_CHR 25
 #define OP_ORD 26
 #define OP_NOT 27
+#define OP_SQR 28
+#define OP_SQRT 29
 
 // node type
 #define N_PROGRAM 0
@@ -70,8 +72,9 @@
 #define TY_REAL 1
 #define TY_CHAR 2
 #define TY_BOOLEAN 3
-#define TY_ARRAY 4
-#define TY_RECORD 5
+#define TY_STRING 4
+#define TY_ARRAY 5
+#define TY_RECORD 6
 
 std::string getOpNameByID(int id);
 
