@@ -21,7 +21,10 @@ using namespace ast;
 
 class Translator {
 public:
-    static Base* translate(cst_tree tree);
+    /* Base* ast_tree is not used in most cases, 
+     * only when we need to perform findType 
+     * (which requires the father ast node of the current node) will it be used. */
+    static Base* translate(cst_tree tree, Base* ast_tree = nullptr);
 };
 
 

@@ -1,9 +1,10 @@
 %{
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "cst.h"
 #include "symtab.h"
-#include "spl.tab.h"
+#include "parser.hpp"
 extern "C" int yylex();
 extern "C" void yyerror(const char* s);
 int installId(char*, unsigned);
@@ -98,7 +99,7 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "char"      TOKEN(T_CHAR)
 "integer"   TOKEN(T_INTEGER)
 "real"      TOKEN(T_REAL)
-"str"       TOKEN(T_STR)
+"string"    TOKEN(T_STRING)
 
 {id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
 {char_const}        { yylval.iVal = installId(yytext, 2); return S_CHAR; }
@@ -113,6 +114,10 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 
 // 
 int installId(char* id, unsigned type = -1) {
+    // convert to lower case
+    char lower_id[100];
+    strcpy(lower_id, id);
+    for (char* p = lower_id; *p; p++) *p = tolower(*p);
     extern sym_tab_node symtab[];
     extern int currentSymTabSize;
     int result = lookup(id);
@@ -128,6 +133,11 @@ int installId(char* id, unsigned type = -1) {
     }
 }
 int lookup(char* id) {
+    // convert to lower case
+    char lower_id[100];
+    strcpy(lower_id, id);
+    for (char* p = lower_id; *p; p++) *p = tolower(*p);
+
     extern sym_tab_node symtab[];
     extern int currentSymTabSize;
     for (int i = 0; i < currentSymTabSize; i++) {

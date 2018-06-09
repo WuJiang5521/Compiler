@@ -30,10 +30,12 @@ using namespace llvm;
 
 static llvm::LLVMContext MyContext;
 
+llvm::Function* createPrintf(CodeGenContext& context);
+
 class CodeGenBlock {
 public:
     BasicBlock *block;
-    Value *returnValue;
+    llvm::Value *returnValue;
     CodeGenBlock * parent;
     std::map<std::string,  llvm::Value*> locals;
     std::map<std::string, ast::Exp*> const_locals;
@@ -51,12 +53,16 @@ public:
     std::map<Function*,Function*> parent;
     Function* currentFunction;
     
+    llvm::BasicBlock* labelBlock[10000];
+    
+    llvm::Function* printf;
+    
     
     CodeGenContext() { module = new Module("main", MyContext); }
     
     void generateCode(ast::Program& root);
     GenericValue runCode();
-    std::map<std::string,  Value*>& locals() { return blocks.top()->locals; }
+    std::map<std::string,  llvm::Value*>& locals() { return blocks.top()->locals; }
     BasicBlock* currentBlock() { return blocks.top()->block; }
     CodeGenBlock* currentCodeGenBlock() {return blocks.top(); } 
     void pushBlock(BasicBlock *block) { 
@@ -69,13 +75,13 @@ public:
       blocks.pop(); 
       delete top;
     }
-    void setCurrentReturnValue(Value *value) { blocks.top()->returnValue = value; }
-    Value* getCurrentReturnValue() { return blocks.top()->returnValue; }
+    void setCurrentReturnValue(llvm::Value *value) { blocks.top()->returnValue = value; }
+    llvm::Value* getCurrentReturnValue() { return blocks.top()->returnValue; }
     void insertConst(std::string name, ast::Exp* const_v){
 	blocks.top()->const_locals[name] = const_v;
     }
     
-    Value* getValue(std::string name){
+    llvm::Value* getValue(std::string name){
         std::cout << "Start getValue for " << name << std::endl;
         std::cout<<"found:"<<currentFunction->getValueSymbolTable()->lookup(name)<<"\n";
         std::cout<<"main:"<<mainFunction<<"\n";

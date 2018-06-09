@@ -92,19 +92,19 @@ bool ast::canFindLabel(const int &label, Base *node) {
             Define *d_node = ((FunctionDef *) node)->define;
             for (LabelDef *iter: d_node->label_def)
                 if(iter->label_index == label) return true;
-            return ast::canFindLabel(label, node->father);
+            return canFindLabel(label, node->father);
         }
         case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_TYPE_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
         case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
         case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP: case N_CONSTANT_EXP:
         case N_DEFINE: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
-            return ast::canFindLabel(label, node->father);
+            return canFindLabel(label, node->father);
         default:
             return false;
     }
 }
 
-ConstDef *findConst(const std::string &type_name, Base *node) {
+ConstDef *ast::findConst(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_CONST_DEF) return (ConstDef*)result;
     else return nullptr;
@@ -116,14 +116,14 @@ Type *ast::findType(const std::string &type_name, Base *node) {
     else return nullptr;
 }
 
-Type *findVar(const std::string &type_name, Base *node) {
+Type* ast::findVar(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_VAR_DEF) return ((VarDef*)result)->type;
     else if (result->node_type == N_ARG_DEF) return ((ArgDef*)result)->type;
     else return nullptr;
 }
 
-FunctionDef *findFunction(const std::string &type_name, Base *node) {
+FunctionDef *ast::findFunction(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_FUNCTION_DEF) return (FunctionDef*)result;
     else return nullptr;
@@ -748,12 +748,9 @@ std::string getString(Base *ori_node) {
                         str.append("]}");
                     }
                         break;
-                        /*
-                        default: {
-                            if (node->base_type < type_list.size()) str.append(type_list[node->base_type]->name);
-                            else str.append("\"There is something wrong. The type cannot be recognised.\"");
-                        }
-                        */
+                    default: {
+                        str.append("\"There is something wrong. The type cannot be recognised.\"");
+                    }
                 }
             }
                 break;
@@ -764,7 +761,7 @@ std::string getString(Base *ori_node) {
     return str;
 }
 
-void printTree(std::string filename, Base *root) {
+void ast::printTree(std::string filename, Base *root) {
     std::string str = getString(root);
     std::ofstream SaveFile(filename + ".json");
     SaveFile << str;

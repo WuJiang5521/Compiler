@@ -3,7 +3,7 @@
 //
 
 #include "tree.h"
-
+#define CHECK_SEMANTICS
 #ifdef CHECK_SEMANTICS
 using namespace ast;
 
@@ -450,7 +450,7 @@ bool UnaryExp::checkSemantics() {
                     yyerror(info);
                     is_legal = false;
                 } else {
-                    return_type = ast::copyType(operand->return_type);
+                    return_type = copyType(operand->return_type);
                 }
             }
                 break;

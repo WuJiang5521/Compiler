@@ -6,6 +6,7 @@
 #define SPLCOMPILER_TREE_H
 
 #define USE_LLVM
+
 #define CHECK_SEMANTICS
 
 #include <llvm/IR/Value.h>
@@ -326,7 +327,7 @@ namespace ast {
     public:
         Type *type;
 
-        ArgDef(Type *ty) : Base(N_ARG_DEF) {
+        explicit ArgDef(Type *ty) : Base(N_ARG_DEF) {
             type = ty;
         }
 
@@ -667,9 +668,11 @@ namespace ast {
 
         explicit Type(int base_type);
 
+
 #ifdef USE_LLVM
 
-        llvm::Type *toLLVMType(void);
+        llvm::Type *toLLVMType(CodeGenContext& context);
+	    virtual llvm::Value *codeGen(CodeGenContext &context);
 
 #endif
     };
@@ -677,7 +680,6 @@ namespace ast {
     class Value {
     public:
         int base_type; // 0: int 1: real 2: char 3: boolean 5: array 6: record
-        ADDRESS address;
         union return_value {
             INTEGER integer_value;
             REAL real_value;
@@ -688,7 +690,7 @@ namespace ast {
         } val;
 #ifdef USE_LLVM
 
-        virtual llvm::Value *codeGen(CodeGenContext &context);
+        llvm::Value *codeGen(CodeGenContext &context);
 
 #endif
     };
@@ -704,12 +706,12 @@ namespace ast {
 
     bool canFindLabel(const int &label, Base *node);
 
-    Value *findConst(const std::string &type_name, Base *node);
+    ConstDef *findConst(const std::string &type_name, Base *node);
 
     Type *findType(const std::string &type_name, Base *node);
 
     Type *findVar(const std::string &type_name, Base *node);
 
-    Type *findFunction(const std::string &type_name, Base *node);
+    FunctionDef *findFunction(const std::string &type_name, Base *node);
 }
 #endif //SPLCOMPILER_TREE_H
