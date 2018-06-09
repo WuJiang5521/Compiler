@@ -3,12 +3,12 @@
 //
 
 #include "tree.h"
-
+#define CHECK_SEMANTICS
 #ifdef CHECK_SEMANTICS
 using namespace ast;
 
 void yyerror(const char *info) {
-    fprintf(stderr, "Semantics error: %s\n", s);
+    fprintf(stderr, "Semantics error: %s\n", info);
     exit(1);
 }
 
@@ -35,51 +35,36 @@ bool canFillTypeWithValue(Type *type, Value *value) {
                 if (!canFillTypeWithValue(type->child_type[0], (*(value->val.children_value))[i])) return false;
             return true;
         default:
-            if (type->base_type == TY_SET || type->base_type >= type_list.size()) return false;
-            return canFillTypeWithValue(type_list[type->base_type], value);
+            return false;
     }
 }
 
 bool isTypeBoolean(Type *type) {
-    if (type->base_type == TY_BOOLEAN) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeBoolean(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_BOOLEAN;
 }
 
 bool isTypeInt(Type *type) {
-    if (type->base_type == TY_INTEGER) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeInt(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_INTEGER;
 }
 
 bool isTypeReal(Type *type) {
-    if (type->base_type == TY_REAL) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeReal(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_REAL;
 }
 
 bool isTypeChar(Type *type) {
-    if (type->base_type == TY_CHAR) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeChar(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_CHAR;
 }
 
 bool isTypeRecord(Type *type) {
-    if (type->base_type == TY_RECORD) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeRecord(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_RECORD;
 }
 
 bool isTypeArray(Type *type) {
-    if (type->base_type == TY_ARRAY) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeArray(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_ARRAY;
 }
 
 bool isTypeString(Type *type) {
-    if (type->base_type == TY_STRING) return true;
-    else if (type->base_type >= TY_CUSTOM) return isTypeString(type_list[type->base_type]);
-    else return false;
+    return type->base_type == TY_STRING;
 }
 
 Type *generateTypeByValue(Value *value) {
@@ -191,7 +176,7 @@ bool Define::checkSemantics() {
         for (VarDef *v_iter: var_def) {
             if (is_legal)
                 for (FunctionDef *f_iter: function_def)
-                    if (t_iter->name == f_iter->name) {
+                    if (v_iter->name == f_iter->name) {
                         is_legal = false;
                         break;
                     } else;
@@ -263,25 +248,25 @@ bool FunctionDef::checkSemantics() {
                 break;
             }
             if (is_legal)
-                for (ConstDef *iter: const_def)
+                for (ConstDef *iter: define->const_def)
                     if (iter->name == arg_name) {
                         is_legal = false;
                         break;
                     }
             if (is_legal)
-                for (TypeDef *iter: type_def)
+                for (TypeDef *iter: define->type_def)
                     if (iter->name == arg_name) {
                         is_legal = false;
                         break;
                     }
             if (is_legal)
-                for (VarDef *iter: var_def)
+                for (VarDef *iter: define->var_def)
                     if (iter->name == arg_name) {
                         is_legal = false;
                         break;
                     }
             if (is_legal)
-                for (FunctionDef *iter: function_def)
+                for (FunctionDef *iter: define->function_def)
                     if (iter->name == arg_name) {
                         is_legal = false;
                         break;
@@ -289,25 +274,25 @@ bool FunctionDef::checkSemantics() {
         }
     }
     if (is_legal)
-        for (ConstDef *iter: const_def)
+        for (ConstDef *iter: define->const_def)
             if (iter->name == name) {
                 is_legal = false;
                 break;
             }
     if (is_legal)
-        for (TypeDef *iter: type_def)
+        for (TypeDef *iter: define->type_def)
             if (iter->name == name) {
                 is_legal = false;
                 break;
             }
     if (is_legal)
-        for (VarDef *iter: var_def)
+        for (VarDef *iter: define->var_def)
             if (iter->name == name) {
                 is_legal = false;
                 break;
             }
     if (is_legal)
-        for (FunctionDef *iter: function_def)
+        for (FunctionDef *iter: define->function_def)
             if (iter->name == name) {
                 is_legal = false;
                 break;
@@ -360,7 +345,7 @@ bool CaseStm::checkSemantics() {
                 sprintf(info, "The match items in case statement must be constant.");
                 yyerror(info);
                 is_legal = false;
-                return;
+                return is_legal;
             }
     // 类型匹配
     bool is_int = isTypeInt(object->return_type);
@@ -371,7 +356,7 @@ bool CaseStm::checkSemantics() {
                 sprintf(info, "The match items in case statement must have the same type as the switch object.");
                 yyerror(info);
                 is_legal = false;
-                return;
+                return is_legal;
             }
     // 重复值检测
     bool flag[65536];
@@ -385,7 +370,7 @@ bool CaseStm::checkSemantics() {
                 sprintf(info, "The match items in case statement must be different.");
                 yyerror(info);
                 is_legal = false;
-                return;
+                return is_legal;
             }
             flag[id] = true;
         }
@@ -874,20 +859,20 @@ bool VariableExp::checkSemantics() {
     else
         switch (temp->node_type) {
             case N_CONST_DEF: {
-                ConstDef *node = (ConstDef *) temp;
+                auto *node = (ConstDef *) temp;
                 is_legal = true;
                 return_type = node->value->return_type;
                 return_value = node->value->return_value;
             }
                 break;
             case N_VAR_DEF: {
-                VarDef *node = (VarDef *) temp;
+                auto node = (VarDef *) temp;
                 is_legal = true;
                 return_type = node->type;
             }
                 break;
             case N_ARG_DEF: {
-                ArgDef *node = (ArgDef *) temp;
+                auto *node = (ArgDef *) temp;
                 is_legal = true;
                 return_type = node->type;
             }

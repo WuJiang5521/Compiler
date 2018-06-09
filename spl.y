@@ -13,8 +13,6 @@
 extern "C" int yylex(void);
 extern "C" FILE* yyin;
 
-Base* ast_root;
-
 int currentSymTabSize = 0;
 sym_tab_node symtab[SYM_TAB_LEN];
 

@@ -7,8 +7,8 @@
 
 using namespace ast;
 
-Type *copyType(Type *origin) {
-    Type *copy = new Type();
+Type *ast::copyType(Type *origin) {
+    auto *copy = new Type();
     copy->name = origin->name;
     copy->base_type = origin->base_type;
     copy->array_start = origin->array_start;
@@ -17,6 +17,27 @@ Type *copyType(Type *origin) {
     for (Type *iter: origin->child_type)
         copy->child_type.push_back(copyType(iter));
     return copy;
+}
+
+bool ast::isSameType(Type *type1, Type *type2) {
+    if(type1->base_type == type2->base_type)
+        switch (type1->base_type) {
+            case TY_INTEGER: case TY_CHAR: case TY_REAL: case TY_BOOLEAN:
+                return true;
+            case TY_ARRAY:
+                if (type1->array_end - type2->array_start == type2->array_end - type2->array_start)
+                    return isSameType(type1->child_type[0], type2->child_type[0]);
+                break;
+            case TY_RECORD:
+                if (type1->child_type.size() == type2->child_type.size()) {
+                    for (int i = 0; i < type1->child_type.size(); i++)
+                        if (!isSameType(type1->child_type[i], type2->child_type[i]))
+                            return false;
+                    return true;
+                }
+            default: return false;
+        }
+    return false;
 }
 
 Base *ast::findName(const std::string &name, ast::Base *node) {
@@ -34,7 +55,7 @@ Base *ast::findName(const std::string &name, ast::Base *node) {
             return nullptr;
         }
         case N_FUNCTION_DEF: {
-            FunctionDef *f_node = (FunctionDef *) node;
+            auto *f_node = (FunctionDef *) node;
             if (f_node->name == name) return f_node;
             for (int i = 0; i < f_node->args_name.size(); i++)
                 if (f_node->args_name[i] == name) return new ArgDef(f_node->args_type[i]);
@@ -83,7 +104,7 @@ bool ast::canFindLabel(const int &label, Base *node) {
     }
 }
 
-ConstDef *findConst(const std::string &type_name, Base *node) {
+ConstDef *ast::findConst(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_CONST_DEF) return (ConstDef*)result;
     else return nullptr;
@@ -96,7 +117,7 @@ Type* ast::findVar(const std::string &type_name, Base *node) {
     else return nullptr;
 }
 
-FunctionDef *findFunction(const std::string &type_name, Base *node) {
+FunctionDef *ast::findFunction(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_FUNCTION_DEF) return (FunctionDef*)result;
     else return nullptr;
@@ -343,6 +364,10 @@ VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {
 
 Type::Type() : Base(N_TYPE) {}
 
+Type::Type(int base_type) : Base(N_TYPE) {
+    this->base_type = base_type;
+}
+
 std::string getString(Value *value) {
     std::string str;
     if (value == nullptr) str = "NULL";
@@ -532,8 +557,7 @@ std::string getString(Base *ori_node) {
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
                 str.append("{\"left\":\"");
-                // TODO only support a=1
-                //str.append(node->left_value);
+                str.append(getString(node->left_value));
                 str.append("\",\"right\":");
                 str.append(getString(node->right_value));
                 str.append("}");
@@ -718,12 +742,9 @@ std::string getString(Base *ori_node) {
                         str.append("]}");
                     }
                         break;
-                        /*
-                        default: {
-                            if (node->base_type < type_list.size()) str.append(type_list[node->base_type]->name);
-                            else str.append("\"There is something wrong. The type cannot be recognised.\"");
-                        }
-                        */
+                    default: {
+                        str.append("\"There is something wrong. The type cannot be recognised.\"");
+                    }
                 }
             }
                 break;

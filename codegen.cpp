@@ -172,13 +172,17 @@ llvm::Value* LabelDef::codeGen(CodeGenContext& context){
 
 llvm::Value* ConstDef::codeGen(CodeGenContext& context){
   std::cout << "creating const: " << name << std::endl;
-  if(value == nullptr){
-    std::cout << "???a constDef without a value" << std::endl;
+  if(value->node_type == N_CONSTANT_EXP){
+    ConstantExp* _opLeft = static_cast<ConstantExp*>(value);
+    auto alloc = new llvm::AllocaInst(_opLeft->return_type->toLLVMType(context), 0,  name.c_str(), context.currentBlock());
+    auto store = new llvm::StoreInst(_opLeft->return_value->codeGen(context), alloc, false, context.currentBlock());
+    context.insertConst(name, value);
+    return store;
   }
-  auto alloc = new llvm::AllocaInst(value->return_type->toLLVMType(context), 0,  name.c_str(), context.currentBlock());
-  auto store = new llvm::StoreInst(value->return_value->codeGen(context), alloc, false, context.currentBlock());
-  context.insertConst(name, value);
-  return store;
+  else{
+    std::cout << "Wrong left Value" << std::endl;
+    exit(0);
+  }
 }
 
 llvm::Value* TypeDef::codeGen(CodeGenContext& context){
@@ -418,7 +422,7 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
 
     std::vector<llvm::Constant *> indices;
     indices.push_back(zero); indices.push_back(zero);
-    auto var_ref = llvm::ConstantExpr::getGetElementPtr(format_string_var->getType(), format_string_var, indices);
+    auto var_ref = llvm::ConstantExpr::getGetElementPtr(format_string_var->getValueType(), format_string_var, indices);
 
     printf_args.insert(printf_args.begin(), var_ref);
     auto call = llvm::CallInst::Create(context.printf, llvm::makeArrayRef(printf_args), "", context.currentBlock());

@@ -1,0 +1,31 @@
+PrOgram ojbk;
+label
+    1;
+const
+    a = 'a'';
+    b = 1;
+type
+    arr = array['a'..'b'] of integer;
+    rec = record
+        a: boolean;
+    end;
+var
+    c, d: rec;
+    e: arr;
+function count(a: integer): integer;
+    procedure f(var a: integer;);
+    begin
+      a := a - 1;
+    end;
+begin
+    while a > 0 do begin
+        f(a);
+        count := count + 1;
+    end;
+end;
+
+begin
+  e['a'] = 3;
+  e['b'] = 5;
+  writeln(count(e['a']), ' ', e['a']);
+end.
