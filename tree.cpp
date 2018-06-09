@@ -89,12 +89,6 @@ ConstDef *findConst(const std::string &type_name, Base *node) {
     else return nullptr;
 }
 
-Type *ast::findType(const std::string &type_name, Base *node) {
-    Base *result = findName(type_name, node);
-    if(result->node_type == N_TYPE_DEF) return ((TypeDef*)result)->type;
-    else return nullptr;
-}
-
 Type* ast::findVar(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
     if(result->node_type == N_VAR_DEF) return ((VarDef*)result)->type;
@@ -759,17 +753,6 @@ Type *copyType(Type *origin) {
     return copy;
 }
 */
-Type *copyType(Type *origin) {
-    Type *copy = new Type();
-    copy->name = origin->name;
-    copy->base_type = origin->base_type;
-    copy->array_start = origin->array_start;
-    copy->array_end = origin->array_end;
-    copy->child_type.clear();
-    for (Type *iter: origin->child_type)
-        copy->child_type.push_back(copyType(iter));
-    return copy;
-}
 
 Type *ast::findType(const std::string &type_name, Base *node) {
     switch (node->node_type) {

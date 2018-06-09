@@ -11,6 +11,8 @@
 
 #include <cstddef>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 #include "translator.h"
 #include "parser.hpp"
 #include "cst.h"
@@ -77,6 +79,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 }
                 LabelDef* labelDef = new LabelDef(label_list_ptr->item);
                 define->addLabel(labelDef);
+                std::reverse(define->label_def.begin(), define->label_def.end());
             }
             
             
@@ -98,6 +101,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 ConstantExp* value = (ConstantExp*)translate(const_expr_list_ptr->first);
                 ConstDef* constDef = new ConstDef(name, value);
                 define->addConst(constDef);
+                std::reverse(define->const_def.begin(), define->const_def.end());
                 set_type(const_expr_list_ptr->item, value->value->base_type);
             }
 
@@ -120,6 +124,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 Type* type = (Type*)translate(type_definition_ptr->first);
                 TypeDef* typeDef = new TypeDef(name, type);
                 define->addType(typeDef);
+                std::reverse(define->type_def.begin(), define->type_def.end());
             }
 
             // ROUTINE_HEAD->VAR_PART
@@ -156,6 +161,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     define->addVar(varDef);
                     name_list_ptr = name_list_ptr->first;
                 } while (name_list_ptr != nullptr);
+                std::reverse(define->var_def.begin(), define->var_def.end());
             }
 
             // ROUTINE_HEAD->ROUTINE_PART
@@ -174,6 +180,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                         // no parameter
                     }
                     else {
+                        // begin add arguments 1
                         cst_tree para_decl_list_ptr = parameters_ptr->first;
                         while (para_decl_list_ptr->second != nullptr) {
                             cst_tree para_type_list_ptr = para_decl_list_ptr->second;
@@ -223,6 +230,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                             } while (name_list_ptr != nullptr);
                         }
                     }
+                    // end add arguments 1
                     if (function_head_ptr->second != nullptr) {
                         Type* type = (Type*)translate(function_head_ptr->second);
                         functionDef->setReturnType(type);
@@ -237,6 +245,10 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     cst_tree stmt_list_ptr = sub_routine_ptr->second->first->first;
                     functionDef->addDefine(func_define);
                     functionDef->body = (Body*)translate(stmt_list_ptr);
+                    std::reverse(functionDef->args_name.begin(), functionDef->args_name.end());
+                    std::reverse(functionDef->args_type.begin(), functionDef->args_type.end());
+                    std::reverse(functionDef->args_is_formal_parameters.begin(), functionDef->args_is_formal_parameters.end());
+
 
                     define->addFunction(functionDef);
 
@@ -315,9 +327,14 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 functionDef->addDefine(func_define);
                 functionDef->body = (Body*)translate(stmt_list_ptr);
 
+                std::reverse(functionDef->args_name.begin(), functionDef->args_name.end());
+                std::reverse(functionDef->args_type.begin(), functionDef->args_type.end());
+                std::reverse(functionDef->args_is_formal_parameters.begin(), functionDef->args_is_formal_parameters.end());
+
                 define->addFunction(functionDef);
 
-                routine_part_ptr = routine_part_ptr->first;
+                std::reverse(define->function_def.begin(), define->function_def.end());
+
             }
             return (Base*)define;
         }
@@ -439,6 +456,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             for(std::vector<Stm*>::iterator it = tmp_body->stms.begin(); it != tmp_body->stms.end(); it++) {
                 body->addStm(*it);
             }
+            std::reverse(body->stms.begin(), body->stms.end());
 
             return (Base*)body;
         }
@@ -461,6 +479,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     stmt_list_ptr = stmt_list_ptr->first;
                 }
             }
+            std::reverse(body->stms.begin(), body->stms.end());
             return (Base*)body;
         }
 
@@ -684,6 +703,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             Situation* situation = (Situation*)translate(case_expr_ptr);
             caseStm->addSituation(situation);
 
+            std::reverse(caseStm->situations.begin(),caseStm->situations.end());
             body->addStm(caseStm);
 
             return (Base*)body;
@@ -804,6 +824,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             }
             Exp* tmp_exp = (Exp*)translate(args_list_ptr->first);
             exp_1->addArgs(tmp_exp);
+            std::reverse(exp_1->args.begin(), exp_1->args.end());
             return (Base*)exp_1;
         }
 
@@ -869,56 +890,82 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case CONST_VALUE_INT:
         {
             Value* value = new Value;
-            value->base_type = 0;
+            value->base_type = TY_INTEGER;
             value->val.integer_value = tree->item;
+            Type* type = new Type();
+            type->base_type = TY_INTEGER;
+            ConstantExp* constantExp = new ConstantExp(value);
+            ((Exp*)constantExp)->return_type = type;
 
-            return (Base*)(new ConstantExp(value));
+            return (Base*)(constantExp);
         }
 
         case CONST_VALUE_REAL:
         {
             Value* value = new Value;
-            value->base_type = 1;
+            value->base_type = TY_REAL;
             value->val.real_value = lookup_float(tree->item);
-            return (Base*)(new ConstantExp(value));
+            Type* type = new Type();
+            type->base_type = TY_REAL;
+            ConstantExp* constantExp = new ConstantExp(value);
+            ((Exp*)constantExp)->return_type = type;
+
+            return (Base*)(constantExp);
         }
 
         case CONST_VALUE_CHAR:
         {
             Value* value = new Value;
-            value->base_type = 2;
+            value->base_type = TY_CHAR;
             value->val.char_value = lookup_string(tree->item).c_str()[0];
-            return (Base*)(new ConstantExp(value));
+            Type* type = new Type();
+            type->base_type = TY_CHAR;
+            ConstantExp* constantExp = new ConstantExp(value);
+            ((Exp*)constantExp)->return_type = type;
+
+            return (Base*)(constantExp);
         }
 
         case CONST_VALUE_STR:
         {
             Value* value = new Value;
-            value->base_type = 4;
+            value->base_type = TY_STRING;
 
             value->val.string_value = new std::string;
             *value->val.string_value = lookup_string(tree->item);
-            return (Base*)(new ConstantExp(value));
+            Type* type = new Type();
+            type->base_type = TY_STRING;
+            ConstantExp* constantExp = new ConstantExp(value);
+            ((Exp*)constantExp)->return_type = type;
+
+            return (Base*)(constantExp);
         }
 
         case CONST_VALUE:
         {
             Value* value = new Value;
+            Type* type = new Type();
+
             switch (tree->item) {
                 case T_TRUE:
                     value->val.boolean_value = true;
-                    value->base_type = 3;
+                    value->base_type = TY_BOOLEAN;
+                    type->base_type = TY_BOOLEAN;
                     break;
                 case T_FALSE:
                     value->val.boolean_value = false;
-                    value->base_type = 3;
+                    value->base_type = TY_BOOLEAN;
+                    type->base_type = TY_BOOLEAN;
                     break;
                 case T_MAXINT:
                     value->val.integer_value = 32767;
-                    value->base_type = 0;
+                    value->base_type = TY_INTEGER;
+                    type->base_type = TY_INTEGER;
                     break;
             }
-            return (Base*)(new ConstantExp(value));
+            ConstantExp* constantExp = new ConstantExp(value);
+            ((Exp*)constantExp)->return_type = type;
+            return (Base*)(constantExp);
         }
 
         case EXPRESSION_LIST:
@@ -932,6 +979,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             }
             Exp* exp = (Exp*)translate(expression_list_ptr->first);
             expList->addExp(exp);
+            std::reverse(expList->exps.begin(), expList->exps.begin());
         }
 
         case EXPRESSION:
@@ -979,6 +1027,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             }
             Exp* exp = (Exp*)translate(args_list_ptr->first);
             expList->addExp(exp);
+            std::reverse(expList->exps.begin(), expList->exps.begin());
             return (Base*)expList;
         }
 
