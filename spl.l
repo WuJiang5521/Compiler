@@ -21,7 +21,7 @@ char_const      \'.\'
 string_const    \'.*\'
 real            ({digit}+\.{digit}+)|(\.{digit}+)
 integer         {digit}+
-id              {char}({char}|{digit})*
+id              {char}(_|{char}|{digit})*
 ws              {delimiter}+
 comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 

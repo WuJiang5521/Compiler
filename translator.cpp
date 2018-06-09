@@ -55,10 +55,10 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             Program* program = new Program(head_name);
             cst_tree routine_head_ptr = tree->second->first;
             Define* define = (Define*)translate(routine_head_ptr);
-            program->define = define;
+            program->addDefine(define);
             cst_tree stmt_list_ptr = tree->second->second->first->first;
             Body* body = (Body*)translate(stmt_list_ptr);
-            program->body = body;
+            program->addBody(body);
             return (Base*)program;
         }
 
@@ -245,7 +245,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     Define* func_define = (Define*)translate(routine_head_ptr);
                     cst_tree stmt_list_ptr = sub_routine_ptr->second->first->first;
                     functionDef->addDefine(func_define);
-                    functionDef->body = (Body*)translate(stmt_list_ptr);
+                    functionDef->addBody((Body*)translate(stmt_list_ptr));
                     std::reverse(functionDef->args_name.begin(), functionDef->args_name.end());
                     std::reverse(functionDef->args_type.begin(), functionDef->args_type.end());
                     std::reverse(functionDef->args_is_formal_parameters.begin(), functionDef->args_is_formal_parameters.end());
@@ -326,7 +326,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 Define* func_define = (Define*)translate(routine_head_ptr);
                 cst_tree stmt_list_ptr = sub_routine_ptr->second->first->first;
                 functionDef->addDefine(func_define);
-                functionDef->body = (Body*)translate(stmt_list_ptr);
+                functionDef->addBody((Body*)translate(stmt_list_ptr));
 
                 std::reverse(functionDef->args_name.begin(), functionDef->args_name.end());
                 std::reverse(functionDef->args_type.begin(), functionDef->args_type.end());
@@ -626,9 +626,8 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
 
             IfStm* ifStm = new IfStm();
             ifStm->setCondition(condition);
-            ifStm->addFalse();
-            ifStm->true_do = true_do;
-            ifStm->false_do = false_do;
+            ifStm->addTrue(true_do);
+            ifStm->addFalse(false_do);
 
             body->addStm(ifStm);
             return (Base*)body;
@@ -656,7 +655,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             repeatStm->setCondition(condition);
             cst_tree stmt_list_ptr = tree->first;
             Body* tmp_body = (Body*)translate(stmt_list_ptr);
-            repeatStm->loop = tmp_body;
+            repeatStm->addLoop(tmp_body);
             body->addStm(repeatStm);
             return (Base*)repeatStm;
         }
@@ -668,7 +667,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             Exp* condition = (Exp*)translate(tree->first);
             WhileStm* whileStm = new WhileStm(condition);
             cst_tree stmt_ptr = tree->second;
-            whileStm->loop = (Body*)translate(stmt_ptr);
+            whileStm->addLoop((Body*)translate(stmt_ptr));
             body->addStm(whileStm);
 
             return (Base*)body;
@@ -689,7 +688,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 step = -1;
             }
             ForStm* forStm = new ForStm(iter, start, end, step);
-            forStm->loop = (Body*)translate(tree->fourth);
+            forStm->addLoop((Body*)translate(tree->fourth));
             body->addStm(forStm);
             return (Base*)body;
         }
@@ -722,13 +721,13 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         {
             Situation* situation = new Situation();
             if (tree->second != nullptr) {
-                situation->solution = (Body*)translate(tree->second);
+                situation->addSolution((Body*)translate(tree->second));
                 Exp* exp = (ConstantExp*)translate(tree->first);
                 situation->addMatch(exp);
                 return (Base*)situation;
             }
             else {
-                situation->solution = (Body*)translate(tree->first);
+                situation->addSolution((Body*)translate(tree->first));
                 std::string name = lookup_string(tree->item);
                 Exp* exp = new VariableExp(name);
                 situation->addMatch(exp);

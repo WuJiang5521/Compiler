@@ -18,10 +18,6 @@ sym_tab_node symtab[SYM_TAB_LEN];
 
 Base* ast_root;
 
-void yyerror(const char* s) {
-	fprintf(stderr, "Parse error: %s\n", s);
-	exit(1);
-}
 
 %}
 
@@ -61,6 +57,9 @@ program : program_head routine T_DOT
         cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
         ast_root = Translator::translate(root);
         ast::printTree("log", ast_root);
+        if(ast_root->checkSemantics()) {
+            /*Pass the semantics check. We can generate code.*/
+        }
         $$ = root;
     };
 

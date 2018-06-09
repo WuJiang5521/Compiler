@@ -106,20 +106,23 @@ bool ast::canFindLabel(const int &label, Base *node) {
 
 ConstDef *ast::findConst(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
-    if(result->node_type == N_CONST_DEF) return (ConstDef*)result;
+    if(result == nullptr) return nullptr;
+    else if(result->node_type == N_CONST_DEF) return (ConstDef*)result;
     else return nullptr;
 }
 
 Type* ast::findVar(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
-    if(result->node_type == N_VAR_DEF) return ((VarDef*)result)->type;
+    if(result == nullptr) return nullptr;
+    else if (result->node_type == N_VAR_DEF) return ((VarDef*)result)->type;
     else if (result->node_type == N_ARG_DEF) return ((ArgDef*)result)->type;
     else return nullptr;
 }
 
 FunctionDef *ast::findFunction(const std::string &type_name, Base *node) {
     Base *result = findName(type_name, node);
-    if(result->node_type == N_FUNCTION_DEF) return (FunctionDef*)result;
+    if(result == nullptr) return nullptr;
+    else if (result->node_type == N_FUNCTION_DEF) return (FunctionDef*)result;
     else return nullptr;
 }
 
@@ -133,13 +136,19 @@ Exp::Exp(int type) : Base(type) {}
 
 Program::Program(const std::string &name) : Base(N_PROGRAM) {
     this->name = name;
-    body->father = this;
 }
 
 void Program::addDefine(Define *define) {
     if (this->define == nullptr) {
         define->father = this;
         this->define = define;
+    }
+}
+
+void Program::addBody(Body *body) {
+    if (this->body == nullptr) {
+        body->father = this;
+        this->body = body;
     }
 }
 
@@ -190,13 +199,19 @@ void Body::addStm(Stm *stm) {
 }
 
 Situation::Situation() : Base(N_SITUATION) {
-    solution->father = this;
     match_list.clear();
 }
 
 void Situation::addMatch(Exp *exp) {
     exp->father = this;
     match_list.push_back(exp);
+}
+
+void Situation::addSolution(Body *body) {
+    if (solution == nullptr) {
+       body->father = this;
+       solution = body;
+    }
 }
 
 LabelDef::LabelDef(int index) : Base(N_LABEL_DEF) {
@@ -222,7 +237,6 @@ VarDef::VarDef(const std::string &name, Type *type) : Base(N_VAR_DEF) {
 
 FunctionDef::FunctionDef(const std::string &name) : Base(N_FUNCTION_DEF) {
     this->name = name;
-    body->father = this;
     args_type.clear();
     args_name.clear();
 }
@@ -248,6 +262,13 @@ void FunctionDef::addDefine(Define *def) {
     }
 }
 
+void FunctionDef::addBody(Body *body) {
+    if (this->body == nullptr) {
+        body->father = this;
+        this->body = body;
+    }
+}
+
 AssignStm::AssignStm(Exp *left, Exp *right) : Stm(N_ASSIGN_STM) {
     left->father = this;
     right->father = this;
@@ -269,9 +290,7 @@ LabelStm::LabelStm(const int &label) : Stm(N_LABEL_STM) {
     this->label = label;
 }
 
-IfStm::IfStm() : Stm(N_IF_STM) {
-    this->true_do->father = this;
-}
+IfStm::IfStm() : Stm(N_IF_STM) {}
 
 void IfStm::setCondition(Exp *cond) {
     if (this->condition == nullptr) {
@@ -280,9 +299,16 @@ void IfStm::setCondition(Exp *cond) {
     }
 }
 
-void IfStm::addFalse() {
+void IfStm::addTrue(Body *body) {
+    if (this->true_do == nullptr) {
+        this->true_do = body;
+        body->father = this;
+    }
+}
+
+void IfStm::addFalse(Body *body) {
     if (this->false_do == nullptr) {
-        this->false_do = new Body();
+        this->false_do = body;
         this->false_do->father = this;
     }
 }
@@ -305,23 +331,40 @@ ForStm::ForStm(const std::string &iter, Exp *start, Exp *end, int step) : Stm(N_
     this->step = step;
     start->father = this;
     end->father = this;
-    loop->father = this;
+}
+
+void ForStm::addLoop(Body *body) {
+    if (loop == nullptr) {
+        loop = body;
+        body->father = this;
+    }
 }
 
 WhileStm::WhileStm(Exp *cond) : Stm(N_WHILE_STM) {
     condition = cond;
     cond->father = this;
-    loop->father = this;
 }
 
-RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {
-    loop->father = this;
+void WhileStm::addLoop(Body *body) {
+    if (loop == nullptr) {
+        loop = body;
+        body->father = this;
+    }
 }
+
+RepeatStm::RepeatStm() : Stm(N_REPEAT_STM) {}
 
 void RepeatStm::setCondition(Exp *cond) {
     if (condition == nullptr) {
         condition = cond;
         cond->father = this;
+    }
+}
+
+void RepeatStm::addLoop(Body *body) {
+    if (loop == nullptr) {
+        loop = body;
+        body->father = this;
     }
 }
 
@@ -415,12 +458,17 @@ std::string getString(Value *value) {
 
 std::string getString(Base *ori_node) {
     std::string str;
+    char addr[100];
     if (ori_node == nullptr) str = "NULL";
-    else
+    else {
+        sprintf(addr, "%p", ori_node);
         switch (ori_node->node_type) {
             case N_PROGRAM: {
                 auto *node = (Program *) ori_node;
                 str.append("{");
+                str.append("\"addr\":");
+                str.append(addr);
+                str.append(",");
                 str.append("\"name\":\"");
                 str.append(node->name);
                 str.append("\",");
@@ -435,6 +483,9 @@ std::string getString(Base *ori_node) {
             case N_DEFINE: {
                 auto *node = (Define *) ori_node;
                 str.append("{");
+                str.append("\"addr\":");
+                str.append(addr);
+                str.append(",");
                 str.append("\"label\": [");
                 for (auto stm: node->label_def) {
                     str.append(getString(stm));
@@ -471,6 +522,9 @@ std::string getString(Base *ori_node) {
             case N_BODY: {
                 auto *node = (Body *) ori_node;
                 str.append("[");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append("},");
                 for (auto stm: node->stms) {
                     str.append(getString(stm));
                     str.append(",");
@@ -480,7 +534,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_SITUATION: {
                 auto *node = (Situation *) ori_node;
-                str.append("{\"match_list\":[");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"match_list\":[");
                 for (auto match_item: node->match_list) {
                     str.append(getString(match_item));
                     str.append(",");
@@ -492,6 +548,8 @@ std::string getString(Base *ori_node) {
                 break;
             case N_LABEL_DEF: {
                 auto *node = (LabelDef *) ori_node;
+                str.append("{\"addr\":");
+                str.append(addr);
                 str.append("{\"label_def\": ");
                 char id[100];
                 sprintf(id, "%d", node->label_index);
@@ -501,7 +559,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_CONST_DEF: {
                 auto *node = (ConstDef *) ori_node;
-                str.append("{\"const_name\": \"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"const_name\": \"");
                 str.append(node->name);
                 str.append("\", \"const_value\": ");
                 str.append(getString(node->value));
@@ -510,7 +570,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_TYPE_DEF: {
                 auto *node = (TypeDef *) ori_node;
-                str.append("{\"type_name\": \"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"type_name\": \"");
                 str.append(node->name);
                 str.append("\", \"structure\": ");
                 str.append(getString(node->type));
@@ -519,7 +581,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_VAR_DEF: {
                 auto *node = (VarDef *) ori_node;
-                str.append("{\"var_name\": \"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"var_name\": \"");
                 str.append(node->name);
                 str.append("\", \"structure\": ");
                 str.append(getString(node->type));
@@ -528,7 +592,12 @@ std::string getString(Base *ori_node) {
                 break;
             case N_FUNCTION_DEF: {
                 auto *node = (FunctionDef *) ori_node;
-                str.append("{\"func_name\": \"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"father\":");
+                str.append(addr);
+                str.append(",");
+                str.append("\"func_name\": \"");
                 str.append(node->name);
                 str.append("\", \"args\": [");
                 for (int i = 0; i < node->args_name.size(); i++) {
@@ -536,7 +605,7 @@ std::string getString(Base *ori_node) {
                     str.append(node->args_name[i]);
                     str.append("\", \"arg_type\":");
                     str.append(getString(node->args_type[i]));
-                    str.append("\", \"arg_is_formal_parameter\":");
+                    str.append(", \"arg_is_formal_parameter\":");
                     str.append(node->args_is_formal_parameters[i] ? "true" : "false");
                     str.append("},");
                 }
@@ -556,16 +625,20 @@ std::string getString(Base *ori_node) {
                 break;
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
-                str.append("{\"left\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"left\":");
                 str.append(getString(node->left_value));
-                str.append("\",\"right\":");
+                str.append(",\"right\":");
                 str.append(getString(node->right_value));
                 str.append("}");
             }
                 break;
             case N_CALL_STM: {
                 auto *node = (CallStm *) ori_node;
-                str.append("{\"func\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"proc\":\"");
                 str.append(node->name);
                 str.append("\",\"args\":[");
                 for (auto arg: node->args) {
@@ -577,7 +650,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_CASE_STM: {
                 auto *node = (CaseStm *) ori_node;
-                str.append("{\"switch_item\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"switch_item\":\"");
                 str.append(getString(node->object));
                 str.append("\",\"situations\":[");
                 for (auto situation: node->situations) {
@@ -589,7 +664,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_FOR_STM: {
                 auto *node = (ForStm *) ori_node;
-                str.append("{\"iter\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"iter\":\"");
                 str.append(node->iter);
                 str.append("\",\"start\":");
                 str.append(getString(node->start));
@@ -605,7 +682,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_GOTO_STM: {
                 auto *node = (GotoStm *) ori_node;
-                str.append("{\"goto\":");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"goto\":");
                 char label[100];
                 sprintf(label, "%d", node->label);
                 str.append(label);
@@ -614,7 +693,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_IF_STM: {
                 auto *node = (IfStm *) ori_node;
-                str.append("{\"condition\":");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"condition\":");
                 str.append(getString(node->condition));
                 str.append(",\"true_body\":");
                 str.append(getString(node->true_do));
@@ -627,7 +708,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_LABEL_STM: {
                 auto *node = (LabelStm *) ori_node;
-                str.append("{\"label\": ");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"label\": ");
                 char id[100];
                 sprintf(id, "%d", node->label);
                 str.append(id);
@@ -636,7 +719,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_REPEAT_STM: {
                 auto *node = (RepeatStm *) ori_node;
-                str.append("{\"body\":");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"body\":");
                 str.append(getString(node->loop));
                 str.append(",\"condition\":");
                 str.append(getString(node->condition));
@@ -645,7 +730,9 @@ std::string getString(Base *ori_node) {
                 break;
             case N_WHILE_STM: {
                 auto *node = (WhileStm *) ori_node;
-                str.append("{\"condition\":");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"condition\":");
                 str.append(getString(node->condition));
                 str.append(",\"body\":");
                 str.append(getString(node->loop));
@@ -654,48 +741,70 @@ std::string getString(Base *ori_node) {
                 break;
             case N_BINARY_EXP: {
                 auto *node = (BinaryExp *) ori_node;
-                str.append("{\"bin_op\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",");
+                str.append("\"bin_op\":\"");
                 str.append(getOpNameByID(node->op_code));
                 str.append("\",\"operand1\":");
                 str.append(getString(node->operand1));
-                str.append("\",\"operand2\":");
+                str.append(",\"operand2\":");
                 str.append(getString(node->operand2));
+                str.append(",\"return_type\":");
+                str.append(getString(node->return_type));
                 str.append("}");
             }
                 break;
             case N_CALL_EXP: {
                 auto *node = (CallExp *) ori_node;
-                str.append("{\"func\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"func\":\"");
                 str.append(node->name);
                 str.append("\",\"args\":[");
                 for (auto arg: node->args) {
                     str.append(getString(arg));
                     str.append(",");
                 }
-                str.append("]}");
+                str.append("],\"return_type\":");
+                str.append(getString(node->return_type));
+                str.append("}");
             }
                 break;
             case N_CONSTANT_EXP: {
                 auto *node = (ConstantExp *) ori_node;
-                str.append("{\"const_value\":");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"const_value\":");
                 str.append(getString(node->value));
+                str.append(",\"return_type\":");
+                str.append(getString(node->return_type));
                 str.append("}");
             }
                 break;
             case N_UNARY_EXP: {
                 auto *node = (UnaryExp *) ori_node;
-                str.append("{\"mon_op\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",\"una_op\":\"");
                 str.append(getOpNameByID(node->op_code));
                 str.append("\",\"operand\":");
                 str.append(getString(node->operand));
+                str.append(",\"return_type\":");
+                str.append(getString(node->return_type));
                 str.append("}");
             }
                 break;
             case N_VARIABLE_EXP: {
                 auto *node = (VariableExp *) ori_node;
-                str.append("{\"var_name\":\"");
+                str.append("{\"addr\":");
+                str.append(addr);
+                str.append(",");
+                str.append("\"var_name\":\"");
                 str.append(node->name);
-                str.append("\"}");
+                str.append("\",\"return_type\":");
+                str.append(getString(node->return_type));
+                str.append("}");
             }
                 break;
             case N_TYPE: {
@@ -752,6 +861,7 @@ std::string getString(Base *ori_node) {
                 str.append("\"There is something wrong. The node is unrecognised.\"");
             }
         }
+    }
     return str;
 }
 

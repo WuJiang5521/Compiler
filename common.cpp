@@ -58,3 +58,8 @@ std::string getOpNameByID(int id) {
             return "!";
     }
 }
+
+void yyerror(const char *info) {
+    fprintf(stderr, "%s\n", info);
+    exit(1);
+}

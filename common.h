@@ -77,5 +77,6 @@
 #define TY_RECORD 6
 
 std::string getOpNameByID(int id);
+void yyerror(const char *info);
 
 #endif //SPLCOMPILER_COMMON_H
