@@ -125,7 +125,9 @@ llvm::Value* Exp::codeGen(CodeGenContext& context){
 llvm::Value* Body::codeGen(CodeGenContext& context){
   for(auto sub_stm: stms){
     sub_stm->codeGen(context);
+    std::cout << "one sub_stm done" << std::endl;
   }
+  return nullptr;
 }
 
 llvm::Value* Program::codeGen(CodeGenContext& context){
@@ -275,7 +277,7 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
     for(int i = 0; i < arg_types.size(); i++){
       std::cout << "variable define: " << name << std::endl;
       llvm::Value* alloc;
-      alloc = new llvm::AllocaInst(args_type[i]->toLLVMType(context), 0, name.c_str(), context.currentBlock());
+      alloc = new llvm::AllocaInst(args_type[i]->toLLVMType(context), 0, args_name[i].c_str(), context.currentBlock());
       arg_value = args_values++;
       arg_value->setName(args_name[i].c_str());
       auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
@@ -398,12 +400,12 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
     std::vector<llvm::Value *> printf_args;
 
     for(auto arg :args) {
-        auto arg_val = arg->codeGen(context);
+        llvm::Value* arg_val = arg->codeGen(context);
         if (arg_val->getType() == llvm::Type::getInt32Ty(MyContext)) {
             printf_format += "%d";     
             std::cout << "SysFuncCall write variable previous name" << arg_val->getName().str() << std::endl;
             printf_args.push_back(arg_val);
-        } else if (arg_val->getType()->isDoubleTy()) {
+        } else if (arg_val->getType()->isFloatTy()) {
             printf_format += "%lf";
             printf_args.push_back(arg_val);
         } else if (arg_val->getType() == llvm::Type::getInt8PtrTy(MyContext)) {
