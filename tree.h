@@ -7,7 +7,7 @@
 
 #define USE_LLVM
 
-#define CHECK_SEMANTICS
+//#define CHECK_SEMANTICS
 
 
 #ifdef USE_LLVM
@@ -158,6 +158,12 @@ namespace ast {
 
         void addExp(Exp *);
 
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif	
+	
 #ifdef  CHECK_SEMANTICS
         bool checkSemantics() override { return false;}
 

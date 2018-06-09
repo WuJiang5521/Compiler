@@ -3,7 +3,7 @@
 //
 
 #include "tree.h"
-#define CHECK_SEMANTICS
+//#define CHECK_SEMANTICS
 #ifdef CHECK_SEMANTICS
 using namespace ast;
 

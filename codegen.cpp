@@ -278,7 +278,7 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
       alloc = new llvm::AllocaInst(args_type[i]->toLLVMType(context), 0, name.c_str(), context.currentBlock());
       arg_value = args_values++;
       arg_value->setName(args_name[i].c_str());
-      auto inst = new llvm::StoreInst(arg_value, context.getValue(args_name[i]), false, block);
+      auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
     }
     
     if(rtn_type != nullptr){
