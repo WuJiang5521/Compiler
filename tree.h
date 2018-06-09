@@ -143,7 +143,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -173,7 +173,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -206,7 +206,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -225,7 +225,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -245,7 +245,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -265,7 +265,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -286,7 +286,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -317,7 +317,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -332,12 +332,12 @@ namespace ast {
 
 #ifdef USE_LLVM
 
-        virtual llvm::Value *codeGen(CodeGenContext &context);
+        virtual llvm::Value *codeGen(CodeGenContext &context) {return nullptr;};
 
 #endif
 #ifdef CHECK_SEMANTICS
 
-        virtual bool checkSemantics();
+        bool checkSemantics() override {return false;}
 
 #endif
     };
@@ -357,7 +357,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -379,7 +379,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -398,7 +398,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -423,7 +423,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -445,7 +445,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -467,7 +467,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -489,7 +489,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -509,7 +509,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -531,7 +531,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -550,7 +550,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -570,7 +570,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -590,7 +590,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -612,7 +612,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -631,7 +631,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -650,7 +650,7 @@ namespace ast {
 
 #ifdef CHECK_SEMANTICS
 
-        bool checkSemantics();
+        bool checkSemantics() override;
 
 #endif
     };
@@ -664,6 +664,8 @@ namespace ast {
         std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
 
         Type();
+
+        explicit Type(int base_type);
 
 #ifdef USE_LLVM
 
@@ -693,6 +695,10 @@ namespace ast {
 
 // example: printTree("log", new Program())
     void printTree(std::string filename, Base *root);
+
+    Type *copyType(Type *origin);
+
+    bool isSameType(Type *type1, Type *type2);
 
     Base *findName(const std::string &name, Base *node);
 

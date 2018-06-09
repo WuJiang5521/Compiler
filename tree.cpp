@@ -7,8 +7,8 @@
 
 using namespace ast;
 
-Type *copyType(Type *origin) {
-    Type *copy = new Type();
+Type *ast::copyType(Type *origin) {
+    auto *copy = new Type();
     copy->name = origin->name;
     copy->base_type = origin->base_type;
     copy->array_start = origin->array_start;
@@ -17,6 +17,27 @@ Type *copyType(Type *origin) {
     for (Type *iter: origin->child_type)
         copy->child_type.push_back(copyType(iter));
     return copy;
+}
+
+bool ast::isSameType(Type *type1, Type *type2) {
+    if(type1->base_type == type2->base_type)
+        switch (type1->base_type) {
+            case TY_INTEGER: case TY_CHAR: case TY_REAL: case TY_BOOLEAN:
+                return true;
+            case TY_ARRAY:
+                if (type1->array_end - type2->array_start == type2->array_end - type2->array_start)
+                    return isSameType(type1->child_type[0], type2->child_type[0]);
+                break;
+            case TY_RECORD:
+                if (type1->child_type.size() == type2->child_type.size()) {
+                    for (int i = 0; i < type1->child_type.size(); i++)
+                        if (!isSameType(type1->child_type[i], type2->child_type[i]))
+                            return false;
+                    return true;
+                }
+            default: return false;
+        }
+    return false;
 }
 
 Base *ast::findName(const std::string &name, ast::Base *node) {
@@ -34,7 +55,7 @@ Base *ast::findName(const std::string &name, ast::Base *node) {
             return nullptr;
         }
         case N_FUNCTION_DEF: {
-            FunctionDef *f_node = (FunctionDef *) node;
+            auto *f_node = (FunctionDef *) node;
             if (f_node->name == name) return f_node;
             for (int i = 0; i < f_node->args_name.size(); i++)
                 if (f_node->args_name[i] == name) return new ArgDef(f_node->args_type[i]);
@@ -47,7 +68,7 @@ Base *ast::findName(const std::string &name, ast::Base *node) {
                 if(iter->name == name) return iter;
             for (FunctionDef *iter: d_node->function_def)
                 if(iter->name == name) return iter;
-            return findName(type_name, node->father);
+            return findName(name, node->father);
         }
         case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_TYPE_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
         case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
@@ -59,7 +80,7 @@ Base *ast::findName(const std::string &name, ast::Base *node) {
     }
 }
 
-bool canFindLabel(const int &label, Base *node) {
+bool ast::canFindLabel(const int &label, Base *node) {
     switch (node->node_type) {
         case N_PROGRAM: {
             Define *d_node = ((Program *)node)->define;
@@ -71,13 +92,13 @@ bool canFindLabel(const int &label, Base *node) {
             Define *d_node = ((FunctionDef *) node)->define;
             for (LabelDef *iter: d_node->label_def)
                 if(iter->label_index == label) return true;
-            return canFindLabel(label, node->father);
+            return ast::canFindLabel(label, node->father);
         }
         case N_BODY: case N_SITUATION: case N_LABEL_DEF: case N_CONST_DEF: case N_TYPE_DEF: case N_VAR_DEF: case N_ASSIGN_STM:
         case N_CALL_STM: case N_CASE_STM: case N_FOR_STM: case N_GOTO_STM: case N_IF_STM: case N_LABEL_STM:
         case N_REPEAT_STM: case N_WHILE_STM: case N_BINARY_EXP: case N_CALL_EXP: case N_CONSTANT_EXP:
         case N_DEFINE: case N_UNARY_EXP: case N_VARIABLE_EXP: case N_TYPE:
-            return canFindLabel(label, node->father);
+            return ast::canFindLabel(label, node->father);
         default:
             return false;
     }
@@ -328,7 +349,7 @@ BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2) : Exp(N_BINARY_E
     operand2->father = this;
 }
 
-CallExp::CallExp(const std::string &name) : Exp(N_CALL_STM) {
+CallExp::CallExp(const std::string &name) : Exp(N_CALL_EXP) {
     this->name = name;
     args.clear();
 }
@@ -340,7 +361,7 @@ void CallExp::addArgs(Exp *exp) {
 
 ConstantExp::ConstantExp(Value *val) : Exp(N_CONSTANT_EXP) {
     value = val;
-    rtn_value = val;
+    return_value = val;
 }
 
 VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {
@@ -348,6 +369,10 @@ VariableExp::VariableExp(const std::string &name) : Exp(N_VARIABLE_EXP) {
 }
 
 Type::Type() : Base(N_TYPE) {}
+
+Type::Type(int base_type) : Base(N_TYPE) {
+    this->base_type = base_type;
+}
 
 std::string getString(Value *value) {
     std::string str;
@@ -538,8 +563,7 @@ std::string getString(Base *ori_node) {
             case N_ASSIGN_STM: {
                 auto *node = (AssignStm *) ori_node;
                 str.append("{\"left\":\"");
-                // TODO only support a=1
-                //str.append(node->left_value);
+                str.append(getString(node->left_value));
                 str.append("\",\"right\":");
                 str.append(getString(node->right_value));
                 str.append("}");
