@@ -22,7 +22,6 @@ void CodeGenContext::generateCode(Program& root)
 	/* Push a new variable/block context */
 	pushBlock(bblock);
 	currentFunction = mainFunction;
-	for(auto label:labelBlock)
 	root.codeGen(*this); /* emit bytecode for the toplevel block */
 	ReturnInst::Create(MyContext, bblock);
 	popBlock();
@@ -68,7 +67,7 @@ llvm::Type* ast::Type::toLLVMType(CodeGenContext& context){// 0: int 1: real 2: 
   std::cout << "base type = " << base_type << std::endl;  
   switch(base_type){
       case TY_INTEGER: return llvm::Type::getInt32Ty(MyContext);
-      case TY_REAL: return llvm::Type::getDoubleTy(MyContext);
+      case TY_REAL: return llvm::Type::getFloatTy(MyContext);
       case TY_CHAR: return llvm::Type::getInt8Ty(MyContext);
       case TY_BOOLEAN: return llvm::Type::getInt1Ty(MyContext);
       case TY_ARRAY: return llvm::ArrayType::get(this->toLLVMType(context), array_end - array_start + 1);
@@ -177,6 +176,7 @@ llvm::Value* ConstDef::codeGen(CodeGenContext& context){
     auto alloc = new llvm::AllocaInst(_opLeft->return_type->toLLVMType(context), 0,  name.c_str(), context.currentBlock());
     auto store = new llvm::StoreInst(_opLeft->return_value->codeGen(context), alloc, false, context.currentBlock());
     context.insertConst(name, value);
+    std::cout << "creating const done" << std::endl;
     return store;
   }
   else{
@@ -202,7 +202,7 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
       llvm::Constant* ele_of_arr;
       switch(type->base_type){
 	case TY_INTEGER: ele_of_arr = llvm::ConstantInt::get(llvm::Type::getInt32Ty(MyContext), 0, true);  break;
-	case TY_REAL: ele_of_arr = llvm::ConstantFP::get(llvm::Type::getDoubleTy(MyContext), 0);    break;
+	case TY_REAL: ele_of_arr = llvm::ConstantFP::get(llvm::Type::getFloatTy(MyContext), 0);    break;
 	case TY_CHAR: ele_of_arr = llvm::ConstantInt::get(llvm::Type::getInt8Ty(MyContext), 0, true);     break;
 	case TY_BOOLEAN: ele_of_arr = llvm::ConstantInt::get(llvm::Type::getInt1Ty(MyContext), 0, true);     break;
 	default: ;
@@ -228,7 +228,7 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
 	}
 	case TY_REAL: { 
 	  auto go = new llvm::GlobalVariable(*context.module, type->toLLVMType(context),
-					 false, llvm::GlobalValue::ExternalLinkage , llvm::ConstantFP::get(llvm::Type::getDoubleTy(MyContext), 0), name);
+					 false, llvm::GlobalValue::ExternalLinkage , llvm::ConstantFP::get(llvm::Type::getFloatTy(MyContext), 0), name);
 					 alloc = go;
 					 break;
 	}
@@ -453,7 +453,9 @@ llvm::Value* LabelStm::codeGen(CodeGenContext& context){
 }
 
 llvm::Value* IfStm::codeGen(CodeGenContext& context){
+  std::cout << "Creating IFStm" << std::endl;
   llvm::Value* test = condition->codeGen(context);
+  std::cout << "condition generated" << std::endl;
   BasicBlock *btrue = BasicBlock::Create(MyContext, "thenStmt", context.currentFunction);
   BasicBlock *bfalse = BasicBlock::Create(MyContext, "elseStmt", context.currentFunction);
   BasicBlock *bmerge = BasicBlock::Create(MyContext, "mergeStmt", context.currentFunction);    
@@ -461,11 +463,14 @@ llvm::Value* IfStm::codeGen(CodeGenContext& context){
 
   context.pushBlock(btrue);
   true_do->codeGen(context);
+  std::cout << "true block generated" << std::endl;
   llvm::BranchInst::Create(bmerge,context.currentBlock());
   context.popBlock();
   context.pushBlock(bfalse);
-  if (false_do != nullptr)
+  if (false_do != nullptr){
       false_do->codeGen(context);
+      std::cout << "true block generated" << std::endl;
+  }
   llvm::BranchInst::Create(bmerge,context.currentBlock());
   context.popBlock();
   context.pushBlock(bmerge);
@@ -832,7 +837,9 @@ llvm::Value* ConstantExp::codeGen(CodeGenContext& context){
 }
 
 llvm::Value* VariableExp::codeGen(CodeGenContext& context){
+  std::cout << "loading variable: " << name << std::endl;
   return new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
+  std::cout << "loading variable done" << std::endl;
 }
 
 llvm::Value* ast::Type::codeGen(CodeGenContext& context){
@@ -850,7 +857,7 @@ llvm::Value* ExpList::codeGen(CodeGenContext& context){
 llvm::Value* ast::Value::codeGen(CodeGenContext& context){
       switch(base_type){
 	case TY_INTEGER: return llvm::ConstantInt::get(llvm::Type::getInt32Ty(MyContext), val.integer_value, true);    break;
-	case TY_REAL: return llvm::ConstantFP::get(MyContext, llvm::APFloat(val.real_value));    break;
+	case TY_REAL: return llvm::ConstantFP::get(MyContext, llvm::APFloat(val.real_value));      break;
 	case TY_CHAR: return llvm::ConstantInt::get(llvm::Type::getInt8Ty(MyContext), val.char_value, true);     break;
 	case TY_BOOLEAN: return llvm::ConstantInt::get(llvm::Type::getInt1Ty(MyContext), val.boolean_value, true);     break;
 	default: return nullptr;

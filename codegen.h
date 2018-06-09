@@ -94,8 +94,10 @@ public:
 		exit(0);
                 return nullptr;
             }
+            std::cout << "Found Global Variable:" << name << std::endl;
             return module->getGlobalVariable(name);
         }
+        std::cout << "Found Local Variable:" << name << std::endl;
         return nowFunc->getValueSymbolTable()->lookup(name);
     }
     
