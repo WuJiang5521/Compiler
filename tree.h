@@ -154,6 +154,11 @@ namespace ast {
         std::vector<Exp *> exps;
 
         void addExp(Exp *);
+
+#ifdef  CHECK_SEMANTICS
+        bool checkSemantics() override { return false;}
+
+#endif
     };
 
     class Program : public Base {
@@ -673,6 +678,12 @@ namespace ast {
 
         llvm::Type *toLLVMType(CodeGenContext& context);
 	    virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+	    bool checkSemantics() override { return false;}
 
 #endif
     };
