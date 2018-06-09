@@ -30,7 +30,7 @@ void yyerror(const char* s) {
 
 // token
 %token T_LP T_RP T_LB T_RB T_DOT T_COMMA T_COLON T_PLUS T_MINUS T_MUL T_DIV T_GT T_LT T_EQUAL T_NE T_LE T_GE T_ASSIGN T_NOT 
-        T_MOD T_DOTDOT T_SEMI T_AND T_ARRAY T_BEGIN T_CASE T_CONST T_DO T_DOWNTO T_ELSE T_END T_FOR T_FUNCTION T_GOTO 
+        T_MOD T_DOTDOT T_SEMI T_AND T_ARRAY T_BEGIN T_CASE T_CONST T_LABEL T_DO T_DOWNTO T_ELSE T_END T_FOR T_FUNCTION T_GOTO 
         T_IF T_IN T_OF T_OR T_PACKED T_PROCEDURE T_PROGRAM T_RECORD T_REPEAT T_SET T_THEN T_TO T_TYPE T_UNTIL T_VAR T_WHILE T_WITH 
         T_ABS T_CHR T_ODD T_ORD T_PRED T_SQR T_SQRT T_SUCC T_WRITE T_WRITELN T_READ T_BOOLEAN T_CHAR T_INTEGER T_REAL T_STRING T_TRUE T_FALSE T_MAXINT
 
@@ -96,9 +96,9 @@ routine_head : label_part const_part type_part var_part routine_part
         $$ = create_node(NOTHING, ROUTINE_HEAD, $1, $2, $3, $4, $5);
     };
 
-label_part : label_list
+label_part : T_LABEL label_list T_SEMI
     {
-        $$ = create_node(NOTHING, LABEL_PART, $1, NULL, NULL, NULL, NULL);
+        $$ = create_node(NOTHING, LABEL_PART, $2, NULL, NULL, NULL, NULL);
     }
     | 
     {
@@ -237,24 +237,30 @@ simple_type_decl : sys_type
     }
 	| const_value T_DOTDOT const_value
     {
-        $$ = create_node(T_DOTDOT, ARRAY_RANGE_1, $1, $3, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE, $1, $3, NULL, NULL, NULL);
     }
 	| T_MINUS const_value T_DOTDOT const_value
     {
-        cst_tree tmp = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, ARRAY_RANGE_2, $2, $4, NULL, NULL, NULL);
+        //cst_tree tmp = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
+        cst_tree tmp = $2;
+        tmp->item = tmp->item * -1;
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE, tmp, $4, NULL, NULL, NULL);
     }
 	| T_MINUS const_value T_DOTDOT T_MINUS const_value
     {
-        cst_tree tmp1 = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
-        cst_tree tmp2 = create_node(T_MINUS, FACTOR_8, $5, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, ARRAY_RANGE_3, tmp1, tmp2, NULL, NULL, NULL);
+        //cst_tree tmp1 = create_node(T_MINUS, FACTOR_8, $2, NULL, NULL, NULL, NULL);
+        //cst_tree tmp2 = create_node(T_MINUS, FACTOR_8, $5, NULL, NULL, NULL, NULL);
+        cst_tree tmp1 = $2;
+        tmp1->item = tmp1->item * -1;
+        cst_tree tmp2 = $5;
+        tmp2->item = tmp2->item * -1;
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE, tmp1, tmp2, NULL, NULL, NULL);
     }
 	| S_ID T_DOTDOT S_ID
     {
         cst_tree tmp1 = create_node($1, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
         cst_tree tmp2 = create_node($3, FACTOR_1, NULL, NULL, NULL, NULL, NULL);
-        $$ = create_node(T_DOTDOT, ARRAY_RANGE_4, tmp1, tmp2, NULL, NULL, NULL);
+        $$ = create_node(T_DOTDOT, ARRAY_RANGE_1, tmp1, tmp2, NULL, NULL, NULL);
     };
 
 array_type_decl : T_ARRAY T_LB simple_type_decl T_RB T_OF type_decl
@@ -730,6 +736,15 @@ args_list : args_list T_COMMA expression
 %%
 
 int doyyparse() {
+    yyin = stdin;
+    do {
+        yyparse();
+    } while (!feof(yyin));
+
+    return 0;
+}
+
+int main() {
     yyin = stdin;
     do {
         yyparse();

@@ -19,6 +19,7 @@
 #include "tree.h"
 #include "common.h"
 #include "symtab.h"
+#include "id2type.h"
 
 using namespace ast;
 
@@ -135,7 +136,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             else {
                 while (var_decl_list_ptr->second != nullptr) {
                     cst_tree var_decl_ptr = var_decl_list_ptr->second;
-                    Type* type = (Type*)translate(var_decl_ptr->second);
+                    Type* type = (Type*)translate(var_decl_ptr->second, define);        // define is what findType needs
                     cst_tree name_list_ptr = var_decl_ptr->first;
                      do {
                         std::string name = lookup_string(name_list_ptr->item);
@@ -367,7 +368,6 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         // user defined type
         case SIMPLE_TYPE_DECL_2:
         {
-            std::cout << lookup_string(tree->item);
             Type* type = ast::findType(lookup_string(tree->item), ast_tree);
             return (Base*)type;
         }
@@ -390,19 +390,11 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             int first_value = 0;
             int second_value = 0;
             switch (simple_type_decl_ptr->node_id) {
-                case ARRAY_RANGE_1:
+                case ARRAY_RANGE:
                     first_value = ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
                     second_value = ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
                     break;
-                case ARRAY_RANGE_2:
-                    first_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
-                    second_value = ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
-                    break;
-                case ARRAY_RANGE_3:
-                    first_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->first))->value->val.integer_value;
-                    second_value = -1 * ((ConstantExp*)translate(simple_type_decl_ptr->second))->value->val.integer_value;
-                    break;
-                case ARRAY_RANGE_4:
+                case ARRAY_RANGE_1:
                     // TODO a[b..c]
                     break;
             }
@@ -420,7 +412,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case RECORD_TYPE_DECL:
         {
             Type* type = new ast::Type();
-            type->base_type = 6;
+            type->base_type = TY_RECORD;
             cst_tree field_decl_list_ptr = tree->first;
             while (field_decl_list_ptr->second != nullptr) {
                 cst_tree field_decl_ptr = field_decl_list_ptr->second;
@@ -429,11 +421,29 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 Type* tmp_type = (Type*)translate(type_decl_ptr);
                 while (name_list_ptr->first != nullptr) {
                     std::string name = lookup_string(name_list_ptr->item);
-                    //type->child_type
+                    tmp_type->name = name;
+                    type->child_type.push_back(tmp_type);
                     name_list_ptr = name_list_ptr->first;
                 }
+                std::string name = lookup_string(name_list_ptr->item);
+                tmp_type->name = name;
+                type->child_type.push_back(tmp_type);
                 field_decl_list_ptr = field_decl_list_ptr->first;
             }
+            cst_tree field_decl_ptr = field_decl_list_ptr->first;
+            cst_tree name_list_ptr = field_decl_ptr->first;
+            cst_tree type_decl_ptr = field_decl_ptr->second;
+            Type* tmp_type = (Type*)translate(type_decl_ptr);
+            while (name_list_ptr->first != nullptr) {
+                std::string name = lookup_string(name_list_ptr->item);
+                tmp_type->name = name;
+                type->child_type.push_back(tmp_type);
+                name_list_ptr = name_list_ptr->first;
+            }
+            std::string name = lookup_string(name_list_ptr->item);
+            tmp_type->name = name;
+            type->child_type.push_back(tmp_type);
+            std::reverse(type->child_type.begin(), type->child_type.end());
             return (Base*)type;
         }
 
@@ -494,7 +504,6 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             // example: a = 3
             Body* body = new Body();
             std::string name = lookup_string(tree->item);
-            std::cout << name << "\n";
             Exp* left_value = new VariableExp(name);
             Exp* right_value = (Exp*)translate(tree->first);
             AssignStm* assignStm = new AssignStm(left_value, right_value);
@@ -814,7 +823,6 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case FACTOR_2:
         {
             std::string name = lookup_string(tree->item);
-            std::cout << "Factor2: " << name << "\n";
             CallExp* exp_1 = new CallExp(name);
             cst_tree args_list_ptr = tree->first;
             while (args_list_ptr->second != nullptr) {

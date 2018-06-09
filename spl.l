@@ -56,6 +56,7 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "begin"     TOKEN(T_BEGIN)
 "case"      TOKEN(T_CASE)
 "const"     TOKEN(T_CONST)
+"label"     TOKEN(T_LABEL)
 "do"        TOKEN(T_DO)
 "downto"    TOKEN(T_DOWNTO)
 "else"      TOKEN(T_ELSE)
@@ -102,8 +103,20 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "string"    TOKEN(T_STRING)
 
 {id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
-{char_const}        { yylval.iVal = installId(yytext, 2); return S_CHAR; }
-{string_const}      { yylval.iVal = installId(yytext, 4); return S_STRING; }
+{char_const}        { 
+    char character[2];
+    character[0] = yytext[1];
+    character[1] = 0;
+    yylval.iVal = installId(character, 2); 
+    return S_CHAR; 
+                    }
+{string_const}      {
+    char string[ID_MAX_LEN];
+    strcpy(string, yytext+1);       // remove leading '
+    string[strlen(yytext)-2] = 0;   // remove trail '
+    yylval.iVal = installId(string, 4);
+    return S_STRING; 
+                    }
 {integer}           { yylval.iVal = atoi(yytext); return S_INTEGER; }
 {real}              { yylval.iVal = installId(yytext, 1); return S_REAL; }
 {ws}                // do nothing

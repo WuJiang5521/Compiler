@@ -23,7 +23,7 @@ debug:
 front:
 	flex -o tokenizer.cpp ${NAME}.l
 	bison -d -o parser.cpp ${NAME}.y
-	clang++ -g -std=c++11 parser.cpp tokenizer.cpp common.cpp cst.cpp translator.cpp tree.cpp -lfl
+	clang++ -g -D_GLIBCXX_DEBUG -std=c++11 parser.cpp tokenizer.cpp common.cpp cst.cpp translator.cpp tree.cpp -lfl
 
 clean:
 	@rm -f parser.output *.o parser.cpp parser.hpp tokenizer.cpp tester
