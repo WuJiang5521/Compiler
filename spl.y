@@ -12,6 +12,7 @@
 
 extern "C" int yylex(void);
 extern "C" FILE* yyin;
+Base* ast_root;
 
 int currentSymTabSize = 0;
 sym_tab_node symtab[SYM_TAB_LEN];
@@ -56,7 +57,7 @@ void yyerror(const char* s) {
 program : program_head routine T_DOT
     {
         cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
-        Base* ast_root = Translator::translate(root);
+        ast_root = Translator::translate(root);
         printTree("log", ast_root);
         $$ = root;
     };

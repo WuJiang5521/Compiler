@@ -227,7 +227,7 @@ BinaryExp::BinaryExp(int op_code, Exp *operand1, Exp *operand2) : Exp(N_BINARY_E
     operand2->father = this;
 }
 
-CallExp::CallExp(const std::string &name) : Exp(N_CALL_STM) {
+CallExp::CallExp(const std::string &name) : Exp(N_CALL_EXP) {
     this->name = name;
     args.clear();
 }
