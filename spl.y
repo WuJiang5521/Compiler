@@ -12,6 +12,7 @@
 
 extern "C" int yylex(void);
 extern "C" FILE* yyin;
+Base* ast_root;
 
 Base* ast_root;
 

@@ -475,6 +475,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             // example: a = 3
             Body* body = new Body();
             std::string name = lookup_string(tree->item);
+            std::cout << name << "\n";
             Exp* left_value = new VariableExp(name);
             Exp* right_value = (Exp*)translate(tree->first);
             AssignStm* assignStm = new AssignStm(left_value, right_value);
@@ -578,13 +579,13 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     callStm = new CallStm("read");
                     break;
             }
-            return callStm;
+            return (Base*)callStm;
         }
 
         case COMPOUND_STMT:
         {
             Body* body = (Body*)translate(tree->first);
-            return body;
+            return (Base*)body;
         }
 
         case IF_STMT:
@@ -695,14 +696,14 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 situation->solution = (Body*)translate(tree->second);
                 Exp* exp = (ConstantExp*)translate(tree->first);
                 situation->addMatch(exp);
-                return situation;
+                return (Base*)situation;
             }
             else {
                 situation->solution = (Body*)translate(tree->first);
                 std::string name = lookup_string(tree->item);
                 Exp* exp = new VariableExp(name);
                 situation->addMatch(exp);
-                return situation;
+                return (Base*)situation;
             }
         }
 
@@ -793,15 +794,16 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case FACTOR_2:
         {
             std::string name = lookup_string(tree->item);
-            Exp* exp_1 = new CallExp(name);
+            std::cout << "Factor2: " << name << "\n";
+            CallExp* exp_1 = new CallExp(name);
             cst_tree args_list_ptr = tree->first;
             while (args_list_ptr->second != nullptr) {
                 Exp* tmp_exp = (Exp*)translate(args_list_ptr->second);
-                ((CallExp*)exp_1)->addArgs(tmp_exp);
+                exp_1->addArgs(tmp_exp);
                 args_list_ptr = args_list_ptr->first;
             }
             Exp* tmp_exp = (Exp*)translate(args_list_ptr->first);
-            ((CallExp*)exp_1)->addArgs(tmp_exp);
+            exp_1->addArgs(tmp_exp);
             return (Base*)exp_1;
         }
 
@@ -860,7 +862,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             VariableExp* variableExp_1 = new VariableExp(name_1);
             std::string name_2 = lookup_string(tree->first->item);
             VariableExp* variableExp_2 = new VariableExp(name_2);
-            BinaryExp* binaryExp = new BinaryExp(T_DOT, variableExp_1, variableExp_2);
+            BinaryExp* binaryExp = new BinaryExp(OP_DOT, variableExp_1, variableExp_2);
             return (Base*)binaryExp;
         }
 
@@ -870,7 +872,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             value->base_type = 0;
             value->val.integer_value = tree->item;
 
-            return new ConstantExp(value);
+            return (Base*)(new ConstantExp(value));
         }
 
         case CONST_VALUE_REAL:
@@ -878,7 +880,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             Value* value = new Value;
             value->base_type = 1;
             value->val.real_value = lookup_float(tree->item);
-            return new ConstantExp(value);
+            return (Base*)(new ConstantExp(value));
         }
 
         case CONST_VALUE_CHAR:
@@ -886,7 +888,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             Value* value = new Value;
             value->base_type = 2;
             value->val.char_value = lookup_string(tree->item).c_str()[0];
-            return new ConstantExp(value);
+            return (Base*)(new ConstantExp(value));
         }
 
         case CONST_VALUE_STR:
@@ -896,7 +898,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
 
             value->val.string_value = new std::string;
             *value->val.string_value = lookup_string(tree->item);
-            return new ConstantExp(value);
+            return (Base*)(new ConstantExp(value));
         }
 
         case CONST_VALUE:
@@ -916,6 +918,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     value->base_type = 0;
                     break;
             }
+            return (Base*)(new ConstantExp(value));
         }
 
         case EXPRESSION_LIST:
@@ -939,29 +942,29 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 BinaryExp* binaryExp = nullptr;
                 switch (tree->item) {
                     case T_GE:
-                        binaryExp = new BinaryExp(T_GE, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_LARGE_EQUAL, exp_1, exp_2);
                         break;
                     case T_GT:
-                        binaryExp = new BinaryExp(T_GT, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_LARGE, exp_1, exp_2);
                         break;
                     case T_LE:
-                        binaryExp = new BinaryExp(T_LE, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_SMALL_EQUAL, exp_1, exp_2);
                         break;
                     case T_LT:
-                        binaryExp = new BinaryExp(T_LT, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_SMALL, exp_1, exp_2);
                         break;
                     case T_EQUAL:
-                        binaryExp = new BinaryExp(T_EQUAL, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_EQUAL, exp_1, exp_2);
                         break;
                     case T_NE:
-                        binaryExp = new BinaryExp(T_NE, exp_1, exp_2);
+                        binaryExp = new BinaryExp(OP_NOT_EQUAL, exp_1, exp_2);
                         break;
                 }
-                return binaryExp;
+                return (Base*)binaryExp;
             }
             else {
                 Exp* exp = (Exp*)translate(tree->first);
-                return exp;
+                return (Base*)exp;
             }
         }
 
@@ -976,7 +979,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             }
             Exp* exp = (Exp*)translate(args_list_ptr->first);
             expList->addExp(exp);
-            return expList;
+            return (Base*)expList;
         }
 
         case SYS_FUNCT:

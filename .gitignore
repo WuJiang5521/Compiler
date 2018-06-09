@@ -40,3 +40,8 @@ CMakeLists.txt
 *.rar
 *.doc
 *.pdf
+
+lex.yy.c
+*.tab.*
+*.swp
+*.json
