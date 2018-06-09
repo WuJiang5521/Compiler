@@ -1,0 +1,1 @@
+{"name":"hello","define":{"label": [],"const": [{"const_name": "dn", "const_value": {"const_value":123.23}},{"const_name": "cn", "const_value": {"const_value":2}},],"type": [],"var": [{"var_name": "k", "structure": "integer"},],"function": [],},"body":[{"func":"writeln","args":[{"var_name":"cn"},]},{"func":"outer","args":[]},],}

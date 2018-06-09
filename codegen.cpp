@@ -17,6 +17,8 @@ void CodeGenContext::generateCode(Program& root)
 	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
 	BasicBlock *bblock = BasicBlock::Create(MyContext, "entry", mainFunction, 0);
 	
+	printf = createPrintf(*this);
+	
 	/* Push a new variable/block context */
 	pushBlock(bblock);
 	currentFunction = mainFunction;
@@ -52,8 +54,19 @@ GenericValue CodeGenContext::runCode() {
 //codeGen functions in tree.h
 
 //helper function:
+
+llvm::Function* createPrintf(CodeGenContext& context) {
+    std::vector<llvm::Type *> printf_arg_types;
+    printf_arg_types.push_back(llvm::Type::getInt8PtrTy(MyContext));
+    auto printf_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(MyContext), printf_arg_types, true);
+    auto func = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, llvm::Twine("printf"), context.module);
+    func->setCallingConv(llvm::CallingConv::C);
+    return func;
+}
+
 llvm::Type* ast::Type::toLLVMType(CodeGenContext& context){// 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record 7~n: other type defined by user
-    switch(base_type){
+  std::cout << "base type = " << base_type << std::endl;  
+  switch(base_type){
       case TY_INTEGER: return llvm::Type::getInt32Ty(MyContext);
       case TY_REAL: return llvm::Type::getDoubleTy(MyContext);
       case TY_CHAR: return llvm::Type::getInt8Ty(MyContext);
@@ -102,10 +115,12 @@ llvm::Value* getArrRef(BinaryExp* exp, CodeGenContext& context){
 
 llvm::Value* Stm::codeGen(CodeGenContext& context){
   //do nothing
+  return nullptr;
 }
 
 llvm::Value* Exp::codeGen(CodeGenContext& context){
   //do nothing
+  return nullptr;
 }
 
 llvm::Value* Body::codeGen(CodeGenContext& context){
@@ -142,18 +157,24 @@ llvm::Value* Program::codeGen(CodeGenContext& context){
 
 llvm::Value* Define::codeGen(CodeGenContext& context){
   //do nothing
+  return nullptr;
 }
 
 llvm::Value* Situation::codeGen(CodeGenContext& context){
   //do nothing because CaseStm did everything
+  return nullptr;
 }
 
 llvm::Value* LabelDef::codeGen(CodeGenContext& context){
   //don't know what to do
+  return nullptr;
 }
 
 llvm::Value* ConstDef::codeGen(CodeGenContext& context){
   std::cout << "creating const: " << name << std::endl;
+  if(value == nullptr){
+    std::cout << "???a constDef without a value" << std::endl;
+  }
   auto alloc = new llvm::AllocaInst(value->return_type->toLLVMType(context), 0,  name.c_str(), context.currentBlock());
   auto store = new llvm::StoreInst(value->return_value->codeGen(context), alloc, false, context.currentBlock());
   context.insertConst(name, value);
@@ -302,7 +323,8 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
 
 llvm::Value* AssignStm::codeGen(CodeGenContext& context){
   std::cout << "Creating assignment..." << std::endl;
-  if(BinaryExp* _op1 = static_cast<BinaryExp*>(left_value)){//left is an array Elemet
+  if(left_value->node_type == N_BINARY_EXP){//left is an array Elemet
+    BinaryExp* _op1 = static_cast<BinaryExp*>(left_value);
     if(_op1->op_code == OP_INDEX){
       llvm::Value* elementPtr = getArrRef(_op1, context);
       return new llvm::StoreInst(right_value->codeGen(context), elementPtr, false, context.currentBlock());
@@ -312,9 +334,11 @@ llvm::Value* AssignStm::codeGen(CodeGenContext& context){
       exit(0);
     }
   }
-  else if(VariableExp* _op1 = static_cast<VariableExp*>(left_value)){
+  else if(left_value->node_type == N_VARIABLE_EXP){
+    VariableExp* _op1 = static_cast<VariableExp*>(left_value);
     if(_op1->return_type->base_type == TY_ARRAY){
-      if(VariableExp* _op2 = static_cast<VariableExp*>(right_value)){
+      if(right_value->node_type == N_VARIABLE_EXP){
+	VariableExp* _op2 = static_cast<VariableExp*>(right_value);
 	if(_op2->return_type->base_type == TY_ARRAY){
 	  if((_op1->return_type->array_end - _op1->return_type->array_start) ==
 	    (_op2->return_type->array_end - _op2->return_type->array_start)){
@@ -362,11 +386,46 @@ llvm::Value* AssignStm::codeGen(CodeGenContext& context){
 }
 
 llvm::Value* CallStm::codeGen(CodeGenContext& context){
-  if(name == "write"){
-    printf("...");
-  }
-  else if(name == "writeln"){
-    printf("...\n");
+  if(name == "write" || name == "writeln"){
+    bool writeln = false;
+    if(name == "writeln")
+      writeln = true;
+    std::string printf_format;
+    std::vector<llvm::Value *> printf_args;
+
+    for(auto arg :args) {
+        auto arg_val = arg->codeGen(context);
+        if (arg_val->getType() == llvm::Type::getInt32Ty(MyContext)) {
+            printf_format += "%d";     
+            std::cout << "SysFuncCall write variable previous name" << arg_val->getName().str() << std::endl;
+            printf_args.push_back(arg_val);
+        } else if (arg_val->getType()->isDoubleTy()) {
+            printf_format += "%lf";
+            printf_args.push_back(arg_val);
+        } else if (arg_val->getType() == llvm::Type::getInt8PtrTy(MyContext)) {
+            std::cout << "string print is not supported" << std::endl;
+        }
+    }
+    
+    if (writeln)
+        printf_format += "\n";
+    
+    auto printf_format_const = llvm::ConstantDataArray::getString(MyContext, printf_format.c_str());
+
+    auto format_string_var = new llvm::GlobalVariable(*context.module, llvm::ArrayType::get(llvm::IntegerType::get(MyContext, 8), printf_format.size() + 1), true, llvm::GlobalValue::PrivateLinkage, printf_format_const, ".str");
+    
+    auto zero = llvm::Constant::getNullValue(llvm::IntegerType::getInt32Ty(MyContext));    
+
+    std::vector<llvm::Constant *> indices;
+    indices.push_back(zero); indices.push_back(zero);
+    auto var_ref = llvm::ConstantExpr::getGetElementPtr(format_string_var->getType(), format_string_var, indices);
+
+    printf_args.insert(printf_args.begin(), var_ref);
+    auto call = llvm::CallInst::Create(context.printf, llvm::makeArrayRef(printf_args), "", context.currentBlock());
+    //llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
+    
+    //context.popBlock();
+    return call;
   }
   auto function = context.module->getFunction(name.c_str());
   if (function == nullptr){
@@ -465,7 +524,8 @@ llvm::Value* ForStm::codeGen(CodeGenContext& context){
     BasicBlock *bexit = BasicBlock::Create(MyContext, "eixtStmt", context.currentFunction);    
 //  initial for   
     ast::VariableExp* loopVar = new ast::VariableExp(iter);
-    loopVar->return_type = ast::findVariable(iter);
+    loopVar->return_type = ast::findVar(iter, this);
+    loopVar->name = iter;
     ast::AssignStm* initial = new AssignStm(loopVar,start);
     initial->codeGen(context);
     llvm::BranchInst::Create(sloop,context.currentBlock());
@@ -661,7 +721,8 @@ llvm::Value* UnaryExp::codeGen(CodeGenContext& context){
 llvm::Value* BinaryExp::codeGen(CodeGenContext& context){
   //for dot(record)
   if(op_code == OP_DOT){
-    if(VariableExp* _op2 = static_cast<VariableExp*>(operand2)){
+    if(operand2->node_type == N_VARIABLE_EXP){
+      VariableExp* _op2 = static_cast<VariableExp*>(operand2);
       //get index in the record
       int index = getRecordIndex(operand1->return_type, _op2->name);
       llvm::Value* member_index = llvm::ConstantInt::get(MyContext, llvm::APInt(32, index, true));//create member_index
@@ -678,7 +739,8 @@ llvm::Value* BinaryExp::codeGen(CodeGenContext& context){
     }
   }
   else if(op_code == OP_INDEX){
-    if(VariableExp* _op1 = static_cast<VariableExp*>(operand1)){
+    if(operand1->node_type == N_VARIABLE_EXP){
+      VariableExp* _op1 = static_cast<VariableExp*>(operand1);
       auto arr = context.getValue(_op1->name);
       std::vector<llvm::Value*> indices(2);
       indices[0] = llvm::ConstantInt::get(MyContext, llvm::APInt(32, 0, true));
@@ -768,6 +830,18 @@ llvm::Value* ConstantExp::codeGen(CodeGenContext& context){
 llvm::Value* VariableExp::codeGen(CodeGenContext& context){
   return new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
 }
+
+llvm::Value* ast::Type::codeGen(CodeGenContext& context){
+  //do nothing
+  return nullptr;
+}
+
+llvm::Value* ExpList::codeGen(CodeGenContext& context){
+  //do nothing
+  return nullptr;
+}
+
+
 
 llvm::Value* ast::Value::codeGen(CodeGenContext& context){
       switch(base_type){

@@ -1,15 +1,25 @@
-#
-# Makefile
-# weihao, 2018-06-04 15:09
-#
+NAME = spl
+
+LLVM_CONFIG = /usr/local/bin/llvm-config
+
+NO_WARNING =  -Wno-return-type \
+	-Wno-c++11-compat-deprecated-writable-strings \
+	-Wno-deprecated-register \
+	-Wno-switch \
+
+CXXFLAGS = `$(LLVM_CONFIG) --cppflags` -std=c++11 $(NO_WARNING)
+LDFLAGS = `$(LLVM_CONFIG) --ldflags`
+LIBS = `$(LLVM_CONFIG) --libs --system-libs`
 
 all:
-	flex spl.l
-	bison -d spl.y
-	clang++ -g -std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs core` lex.yy.c spl.tab.c cst.cpp translator.cpp tree.cpp common.cpp codegen.cpp -lfl -o tester
+	flex -o tokenizer.cpp ${NAME}.l
+	bison -d -o parser.cpp ${NAME}.y
+	clang++ -g ${CXXFLAGS} *.cpp $(LIBS) $(LDFLAG) -lfl -o tester
+
+# make debug - check the bison output report
+debug:
+	bison -d -o parser.cpp ${NAME}.y -v
 
 clean:
-	rm lex.yy.c spl.tab.*
-
-# vim:ft=make
+	@rm -f parser.output *.o parser.cpp parser.hpp tokenizer.cpp tester
 

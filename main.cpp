@@ -8,7 +8,7 @@
 
 using namespace std;
 
-extern int yyparse();
+extern int doyyparse();
 extern ast::Program* ast_root;
 
 std::string red(const std::string& str) {
@@ -23,24 +23,14 @@ std::string green(const std::string& str) {
 }
 
 int main(int argc, char** argv) {
-	yyparse();
-	extern int parseError;
-	if (parseError) return 0;
-	  cout << green("syntax check success!") << endl;
+	doyyparse();
+	std::cout << "after yyparse()" << std::endl;
 	//cout << ast_root << endl;
 	//ast_root->print_node("", true, true);
 	InitializeNativeTarget();
 	CodeGenContext context;
 	//createCoreFunctions(context);
-	try {
-		context.generateCode(*ast_root);
-		context.runCode();
-	} catch (const std::domain_error &de) {
-		cout << red(de.what()) << endl;		
-	} catch (const std::logic_error &le) {
-		cout << red(le.what()) << endl;	
-	} catch (...) {
-		cout << "other uncaught error" << endl;
-	}
+	context.generateCode(*ast_root);
+	context.runCode();
 	return 0;
 }

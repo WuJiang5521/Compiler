@@ -5,425 +5,708 @@
 #ifndef SPLCOMPILER_TREE_H
 #define SPLCOMPILER_TREE_H
 
+#define USE_LLVM
+//#define CHECK_SEMANTICS
+
 #include <llvm/IR/Value.h>
 
 #include <string>
 #include <vector>
 #include "common.h"
 
-// node type
-#define N_PROGRAM 0
-#define N_DEFINE 1
-#define N_BODY 2
-#define N_SITUATION 3
-#define N_LABEL_DEF 10
-#define N_CONST_DEF 11
-#define N_TYPE_DEF 12
-#define N_VAR_DEF 13
-#define N_FUNCTION_DEF 14
-#define N_ASSIGN_STM 20
-#define N_CALL_STM 21
-#define N_CASE_STM 22
-#define N_FOR_STM 23
-#define N_GOTO_STM 24
-#define N_IF_STM 25
-#define N_LABEL_STM 26
-#define N_REPEAT_STM 27
-#define N_WHILE_STM 28
-#define N_BINARY_EXP 40
-#define N_CALL_EXP 41
-#define N_CONSTANT_EXP 42
-#define N_UNARY_EXP 43
-#define N_VARIABLE_EXP 44
-#define N_TYPE 50
-// type code
-#define TY_INTEGER 0
-#define TY_REAL 1
-#define TY_CHAR 2
-#define TY_BOOLEAN 3
-#define TY_ARRAY 4
-#define TY_RECORD 5
-
 //codegen
 class CodeGenContext;
 
 
-namespace ast{
+namespace ast {
 // base object
-class Base;
-class Stm; // has no return value
-class Exp; // has return value
+    class Base;
+
+    class Stm; // has no return value
+    class Exp; // has return value
 // block object
-class Program;
-class Define;
-class Body;
-class Situation;
+    class Program;
+
+    class Define;
+
+    class Body;
+
+    class Situation;
+
 // define object
-class LabelDef;
-class ConstDef;
-class TypeDef;
-class VarDef;
-class FunctionDef;
+    class LabelDef;
+
+    class ConstDef;
+
+    class TypeDef;
+
+    class VarDef;
+
+    class FunctionDef;
+
 // stm
-class AssignStm;
-class CallStm;
-class CaseStm;
-class ForStm;
-class GotoStm;
-class IfStm;
-class LabelStm;
-class RepeatStm;
-class WhileStm;
+    class AssignStm;
+
+    class CallStm;
+
+    class CaseStm;
+
+    class ForStm;
+
+    class GotoStm;
+
+    class IfStm;
+
+    class LabelStm;
+
+    class RepeatStm;
+
+    class WhileStm;
+
 // exp
-class UnaryExp;
-class BinaryExp;
-class CallExp;
-class ConstantExp;
-class VariableExp;
-class MemoryExp;
+    class UnaryExp;
+
+    class BinaryExp;
+
+    class CallExp;
+
+    class ConstantExp;
+
+    class VariableExp;
+
 // type
-class Type;
+    class Type;
+
 //value
-class Value;
+    class Value;
 
 
 // define
-class Base {
-public:
-    int node_type;
-    Base *father = nullptr;
+    class Base {
+    public:
+        int node_type;
+        Base *father = nullptr;
+        bool is_legal = true;
 
-    explicit Base(int type = 0);
+        explicit Base(int type = 0);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context) = 0;
-};
+#ifdef USE_LLVM
 
-class Stm : public Base {
-public:
-    explicit Stm(int type = 0);
+        virtual llvm::Value *codeGen(CodeGenContext &context) = 0;
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
+#ifdef CHECK_SEMANTICS
 
-class Exp : public Base {
-public:
-    Value *return_value;
-    Type *return_type;
+        virtual bool checkSemantics() = 0;
 
-    explicit Exp(int type = 0);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class Stm : public Base {
+    public:
+        explicit Stm(int type = 0);
 
-class Body : public Base {
-public:
-    std::vector<Stm *> stms;
+#ifdef USE_LLVM
 
-    Body();
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    void addStm(Stm *);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class Exp : public Base {
+    public:
+        Value *return_value;
+        Type *return_type;
 
-class ExpList : public Base {
-public:
-    std::vector<Exp *> exps;
-    void addExp(Exp*);
-};
+        explicit Exp(int type = 0);
 
-class Program : public Base {
-public:
-    std::string name;
-    Define *define = nullptr;
-    Body *body = new Body();
+#ifdef USE_LLVM
 
-    explicit Program(const std::string &);
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    void addDefine(Define *);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class Body : public Base {
+    public:
+        std::vector<Stm *> stms;
 
-class Define : public Base {
-public:
-    std::vector<LabelDef *> label_def; // can be empty
-    std::vector<ConstDef *> const_def; // can be empty
-    std::vector<TypeDef *> type_def; // can be empty
-    std::vector<VarDef *> var_def; // can be empty
-    std::vector<FunctionDef *> function_def; // can be empty
+        Body();
 
-    Define();
+        void addStm(Stm *);
 
-    void addLabel(LabelDef *);
+#ifdef USE_LLVM
 
-    void addConst(ConstDef *);
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    void addType(TypeDef *);
+#endif
 
-    void addVar(VarDef *);
+#ifdef CHECK_SEMANTICS
 
-    void addFunction(FunctionDef *);
+        bool checkSemantics();
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
+    };
 
-class LabelDef : public Base {
-public:
-    int label_index;
+    class ExpList : public Base {
+    public:
+        std::vector<Exp *> exps;
 
-    explicit LabelDef(int);
+        void addExp(Exp *);
+	
+	virtual llvm::Value *codeGen(CodeGenContext &context);
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class Program : public Base {
+    public:
+        std::string name;
+        Define *define = nullptr;
+        Body *body = new Body();
 
-class ConstDef : public Base {
-public:
-    std::string name;
-    Exp *value = nullptr; // cannot be nullptr
+        explicit Program(const std::string &);
 
-    ConstDef(const std::string &, Exp *);
+        void addDefine(Define *);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#ifdef USE_LLVM
 
-class TypeDef : public Base {
-public:
-    std::string name;
-    Type *type = nullptr; // cannot be nullptr
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    TypeDef(const std::string &, Type *);
+#endif
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#ifdef CHECK_SEMANTICS
 
-class VarDef : public Base {
-public:
-    std::string name;
-    Type *type = nullptr; // cannot be null
-    bool is_global = false;
+        bool checkSemantics();
 
-    VarDef(const std::string &, Type *);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class Define : public Base {
+    public:
+        std::vector<LabelDef *> label_def; // can be empty
+        std::vector<ConstDef *> const_def; // can be empty
+        std::vector<TypeDef *> type_def; // can be empty
+        std::vector<VarDef *> var_def; // can be empty
+        std::vector<FunctionDef *> function_def; // can be empty
 
-class FunctionDef : public Base {
-public:
-    std::string name;
-    std::vector<Type *> args_type;
-    std::vector<std::string> args_name;
-    std::vector<bool> args_is_formal_parameters; //true:&, false:local
-    Type *rtn_type = nullptr; //if procedure == nullptr
-    Define *define = nullptr;
-    Body *body = new Body();
+        Define();
 
-    explicit FunctionDef(const std::string &);
+        void addLabel(LabelDef *);
 
-    void addArgs(const std::string &, Type *, bool);
+        void addConst(ConstDef *);
 
-    void setReturnType(Type *);
+        void addType(TypeDef *);
 
-    void addDefine(Define *);
+        void addVar(VarDef *);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+        void addFunction(FunctionDef *);
 
-class AssignStm : public Stm {
-public:
-    Exp *left_value;
-    Exp *right_value;
+#ifdef USE_LLVM
 
-    AssignStm(Exp*, Exp *);
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
 
-class CallStm : public Stm {
-public:
-    std::string name;
-    std::vector<Exp *> args;
+#ifdef CHECK_SEMANTICS
 
-    explicit CallStm(const std::string &);
+        bool checkSemantics();
 
-    void addArgs(Exp *);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class LabelDef : public Base {
+    public:
+        int label_index;
 
-class LabelStm : public Stm {
-public:
-    int label;
+        explicit LabelDef(int);
 
-    explicit LabelStm(const int &);
+#ifdef USE_LLVM
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-class IfStm : public Stm {
-public:
-    Exp *condition = nullptr;
-    Body *true_do = new Body(); // cannot be nullptr
-    Body *false_do = nullptr; // can be nullptr
+#endif
 
-    IfStm();
+#ifdef CHECK_SEMANTICS
 
-    void setCondition(Exp *);
+        bool checkSemantics();
 
-    void addFalse();
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class ConstDef : public Base {
+    public:
+        std::string name;
+        Exp *value = nullptr; // cannot be nullptr
 
-class Situation : public Base {
-public:
-    std::vector<Exp *> match_list;
-    Body *solution = new Body();
+        ConstDef(const std::string &, Exp *);
 
-    Situation();
+#ifdef USE_LLVM
 
-    void addMatch(Exp *);
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
 
-class CaseStm : public Stm {
-public:
-    Exp *object;
-    std::vector<Situation *> situations;
+#ifdef CHECK_SEMANTICS
 
-    explicit CaseStm(Exp *);
+        bool checkSemantics();
 
-    void addSituation(Situation *);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class TypeDef : public Base {
+    public:
+        std::string name;
+        Type *type = nullptr; // cannot be nullptr
 
-class ForStm : public Stm {
-public:
-    std::string iter;
-    Exp *start = nullptr, *end = nullptr;
-    int step; // 1 or -1
-    Body *loop = new Body();
+        TypeDef(const std::string &, Type *);
 
-    ForStm(const std::string &, Exp *, Exp *, int);
+#ifdef USE_LLVM
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-class WhileStm : public Stm {
-public:
-    Exp *condition = nullptr;
-    Body *loop = new Body();
+#endif
 
-    explicit WhileStm(Exp *);
+#ifdef CHECK_SEMANTICS
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+        bool checkSemantics();
 
-class RepeatStm : public Stm {
-public:
-    Exp *condition = nullptr;
-    Body *loop = new Body();
+#endif
+    };
 
-    RepeatStm();
+    class VarDef : public Base {
+    public:
+        std::string name;
+        Type *type = nullptr; // cannot be null
+        bool is_global = false;
 
-    void setCondition(Exp *);
+        VarDef(const std::string &, Type *);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#ifdef USE_LLVM
 
-class GotoStm : public Stm {
-public:
-    int label;
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    explicit GotoStm(int label);
+#endif
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#ifdef CHECK_SEMANTICS
 
-class UnaryExp: public Exp {
-public:
-    int op_code;
-    Exp *operand;
+        bool checkSemantics();
 
-    UnaryExp(int, Exp*);
+#endif
+    };
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+    class FunctionDef : public Base {
+    public:
+        std::string name;
+        std::vector<Type *> args_type;
+        std::vector <std::string> args_name;
+        std::vector<bool> args_is_formal_parameters; //true:&, false:local
+        Type *rtn_type = nullptr; //if procedure == nullptr
+        Define *define = nullptr;
+        Body *body = new Body();
 
-class BinaryExp : public Exp {
-public:
-    int op_code;
-    Exp *operand1, *operand2;
+        explicit FunctionDef(const std::string &);
 
-    BinaryExp(int, Exp *, Exp *);
+        void addArgs(const std::string &, Type *, bool);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+        void setReturnType(Type *);
 
-class CallExp : public Exp {
-public:
-    std::string name;
-    std::vector<Exp *> args;
+        void addDefine(Define *);
 
-    explicit CallExp(const std::string &);
+#ifdef USE_LLVM
 
-    void addArgs(Exp *);
+        virtual llvm::Value *codeGen(CodeGenContext &context);
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
 
-class ConstantExp : public Exp {
-public:
-    Value *value;
+#ifdef CHECK_SEMANTICS
 
-    explicit ConstantExp(Value *);
+        bool checkSemantics();
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
+    };
 
-class VariableExp : public Exp {
-public:
-    std::string name;
+    class ArgDef : public Base {
+    public:
+        Type *type;
 
-    explicit VariableExp(const std::string &);
+        ArgDef(Type *ty) : Base(N_ARG_DEF) {
+            type = ty;
+        }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#ifdef USE_LLVM
 
-class Type : public Base {
-public:
-    std::string name; // use what name to find this value, may be empty
-    int base_type; // 0: int 1: real 2: char 3: boolean 4: set 5: array 6: record 7~n: other type defined by user
-    // string is considered as an array of char
-    int array_start = 0, array_end = 0; // the index for array. useless if the type is not an array
-    std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
+        virtual llvm::Value *codeGen(CodeGenContext &context){};
 
-    Type();
+#endif
+#ifdef CHECK_SEMANTICS
 
-    llvm::Type* toLLVMType(CodeGenContext& context);
-};
+        virtual bool checkSemantics();
 
-class Value {
-public:
-    int base_type; // 0: int 1: real 2: char 3: boolean 4: string 5: array 6: record
-    ADDRESS address;
-	union return_value {
-	    INTEGER integer_value;
-	    REAL real_value;
-	    CHAR char_value;
-	    BOOLEAN boolean_value;
-	    std::string* string_value;
-	    std::vector<Value*>* children_value; // a list of the value of children
-	} val;
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
+#endif
+    };
+
+    class AssignStm : public Stm {
+    public:
+        Exp *left_value;
+        Exp *right_value;
+
+        AssignStm(Exp *, Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class CallStm : public Stm {
+    public:
+        std::string name;
+        std::vector<Exp *> args;
+
+        explicit CallStm(const std::string &);
+
+        void addArgs(Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class LabelStm : public Stm {
+    public:
+        int label;
+
+        explicit LabelStm(const int &);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class IfStm : public Stm {
+    public:
+        Exp *condition = nullptr;
+        Body *true_do = new Body(); // cannot be nullptr
+        Body *false_do = nullptr; // can be nullptr
+
+        IfStm();
+
+        void setCondition(Exp *);
+
+        void addFalse();
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class Situation : public Base {
+    public:
+        std::vector<Exp *> match_list;
+        Body *solution = new Body();
+
+        Situation();
+
+        void addMatch(Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class CaseStm : public Stm {
+    public:
+        Exp *object;
+        std::vector<Situation *> situations;
+
+        explicit CaseStm(Exp *);
+
+        void addSituation(Situation *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class ForStm : public Stm {
+    public:
+        std::string iter;
+        Exp *start = nullptr, *end = nullptr;
+        int step; // 1 or -1
+        Body *loop = new Body();
+
+        ForStm(const std::string &, Exp *, Exp *, int);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class WhileStm : public Stm {
+    public:
+        Exp *condition = nullptr;
+        Body *loop = new Body();
+
+        explicit WhileStm(Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class RepeatStm : public Stm {
+    public:
+        Exp *condition = nullptr;
+        Body *loop = new Body();
+
+        RepeatStm();
+
+        void setCondition(Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class GotoStm : public Stm {
+    public:
+        int label;
+
+        explicit GotoStm(int label);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class UnaryExp : public Exp {
+    public:
+        int op_code;
+        Exp *operand;
+
+        UnaryExp(int, Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class BinaryExp : public Exp {
+    public:
+        int op_code;
+        Exp *operand1, *operand2;
+
+        BinaryExp(int, Exp *, Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class CallExp : public Exp {
+    public:
+        std::string name;
+        std::vector<Exp *> args;
+
+        explicit CallExp(const std::string &);
+
+        void addArgs(Exp *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class ConstantExp : public Exp {
+    public:
+        Value *value;
+
+        explicit ConstantExp(Value *);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class VariableExp : public Exp {
+    public:
+        std::string name;
+
+        explicit VariableExp(const std::string &);
+
+#ifdef USE_LLVM
+
+        virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+
+#ifdef CHECK_SEMANTICS
+
+        bool checkSemantics();
+
+#endif
+    };
+
+    class Type : public Base {
+    public:
+        std::string name; // use what name to find this value, may be empty
+        int base_type; // 0: int 1: real 2: char 3: boolean 5: array 6: record
+        // string is considered as an array of char
+        int array_start = 0, array_end = 0; // the index for array. useless if the type is not an array
+        std::vector<Type *> child_type; // a list of the type of children, there is only one child if the type is array
+
+        Type();
+
+#ifdef USE_LLVM
+
+        llvm::Type *toLLVMType(CodeGenContext& context);
+	virtual llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+    };
+
+    class Value {
+    public:
+        int base_type; // 0: int 1: real 2: char 3: boolean 5: array 6: record
+        ADDRESS address;
+        union return_value {
+            INTEGER integer_value;
+            REAL real_value;
+            CHAR char_value;
+            BOOLEAN boolean_value;
+            std::string *string_value;
+            std::vector<Value *> *children_value; // a list of the value of children
+        } val;
+#ifdef USE_LLVM
+
+        llvm::Value *codeGen(CodeGenContext &context);
+
+#endif
+    };
 
 // example: printTree("log", new Program())
-void printTree(std::string filename, Base *root);
+    void printTree(std::string filename, Base *root);
 
-// example: Type *type = findType("arr");
-Type *findType(const std::string &type_name, Base *node);
+    Base *findName(const std::string &name, Base *node);
+
+    bool canFindLabel(const int &label, Base *node);
+
+    Value *findConst(const std::string &type_name, Base *node);
+
+    Type *findType(const std::string &type_name, Base *node);
+
+    Type *findVar(const std::string &type_name, Base *node);
+
+    Type *findFunction(const std::string &type_name, Base *node);
 }
 #endif //SPLCOMPILER_TREE_H
