@@ -30,11 +30,19 @@ void CodeGenContext::generateCode(Program& root)
 	   to see if our program compiled properly
 	 */
 	std::cout << "Code is generated.\n";
-	module->dump();
+	//module->dump();
 
-	legacy::PassManager pm;
-	pm.add(createPrintModulePass(outs()));
-	pm.run(*module);
+	//legacy::PassManager pm;
+	//pm.add(createPrintModulePass(outs()));
+	
+	//pm.run(*module);
+	std::error_code EC;
+	llvm::raw_fd_ostream OS("LLVM_IR", EC, llvm::sys::fs::F_None);
+	WriteBitcodeToFile(*module, OS);
+	OS.flush();
+	std::cout << "OS flushed" << std::endl;
+	module->dump();
+	
 }
 
 /* Executes the AST by running the main function */
@@ -57,8 +65,8 @@ GenericValue CodeGenContext::runCode() {
 llvm::Function* createPrintf(CodeGenContext& context) {
     std::vector<llvm::Type *> printf_arg_types;
     printf_arg_types.push_back(llvm::Type::getInt8PtrTy(MyContext));
-    auto printf_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(MyContext), printf_arg_types, true);
-    auto func = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, llvm::Twine("printf"), context.module);
+    llvm::FunctionType* printf_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(MyContext), printf_arg_types, true);
+    llvm::Function* func = llvm::Function::Create(printf_type, llvm::Function::ExternalLinkage, llvm::Twine("printf"), context.module);
     func->setCallingConv(llvm::CallingConv::C);
     return func;
 }
@@ -70,7 +78,7 @@ llvm::Type* ast::Type::toLLVMType(CodeGenContext& context){// 0: int 1: real 2: 
       case TY_REAL: return llvm::Type::getFloatTy(MyContext);
       case TY_CHAR: return llvm::Type::getInt8Ty(MyContext);
       case TY_BOOLEAN: return llvm::Type::getInt1Ty(MyContext);
-      case TY_ARRAY: return llvm::ArrayType::get(this->toLLVMType(context), array_end - array_start + 1);
+      case TY_ARRAY: return llvm::ArrayType::get(this->child_type[0]->toLLVMType(context), array_end - array_start + 1);
       case TY_RECORD: {
 	std::vector<llvm::Type*> members;
 	LLVMContext ctx;
@@ -202,7 +210,7 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
       std::cout << " |__is an array" << std::endl;
       auto vec = std::vector<llvm::Constant*>();
       llvm::Constant* ele_of_arr;
-      switch(type->base_type){
+      switch(type->child_type[0]->base_type){
 	case TY_INTEGER: ele_of_arr = llvm::ConstantInt::get(llvm::Type::getInt32Ty(MyContext), 0, true);  break;
 	case TY_REAL: ele_of_arr = llvm::ConstantFP::get(llvm::Type::getFloatTy(MyContext), 0);    break;
 	case TY_CHAR: ele_of_arr = llvm::ConstantInt::get(llvm::Type::getInt8Ty(MyContext), 0, true);     break;
@@ -260,8 +268,9 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
 
 llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
     std::vector<llvm::Type*> arg_types;
-    for(ast::Type *it : args_type)
+    for(ast::Type *it : args_type){
       arg_types.push_back(it->toLLVMType(context)); 
+    }
     auto f_type = llvm::FunctionType::get((rtn_type == nullptr) ? llvm::Type::getVoidTy(MyContext) : rtn_type->toLLVMType(context), llvm::makeArrayRef(arg_types), false);
     auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, name.c_str(), context.module);
     auto block = llvm::BasicBlock::Create(MyContext, "entry", function,NULL);
@@ -281,6 +290,9 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
       arg_value = args_values++;
       arg_value->setName(args_name[i].c_str());
       auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
+      //if(!args_is_formal_parameters[i]){
+	//function->addDereferenceableParamAttr(i, 4);
+      //}
     }
     
     if(rtn_type != nullptr){
@@ -342,10 +354,10 @@ llvm::Value* AssignStm::codeGen(CodeGenContext& context){
   }
   else if(left_value->node_type == N_VARIABLE_EXP){
     VariableExp* _op1 = static_cast<VariableExp*>(left_value);
-    if(_op1->return_type->base_type == TY_ARRAY){
+    if(_op1->codeGen(context)->getType()->isArrayTy()){
       if(right_value->node_type == N_VARIABLE_EXP){
 	VariableExp* _op2 = static_cast<VariableExp*>(right_value);
-	if(_op2->return_type->base_type == TY_ARRAY){
+	if(_op2->codeGen(context)->getType()->isArrayTy()){
 	  if((_op1->return_type->array_end - _op1->return_type->array_start) ==
 	    (_op2->return_type->array_end - _op2->return_type->array_start)){
 	    int size = _op1->return_type->array_end - _op1->return_type->array_start;
@@ -418,18 +430,24 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
     
     auto printf_format_const = llvm::ConstantDataArray::getString(MyContext, printf_format.c_str());
 
-    auto format_string_var = new llvm::GlobalVariable(*context.module, llvm::ArrayType::get(llvm::IntegerType::get(MyContext, 8), printf_format.size() + 1), true, llvm::GlobalValue::PrivateLinkage, printf_format_const, ".str");
+    auto format_string_var = new llvm::GlobalVariable(*context.module,
+						      llvm::ArrayType::get(llvm::IntegerType::get(MyContext, 8),
+									   printf_format.size() + 1),
+						      true, llvm::GlobalValue::PrivateLinkage, printf_format_const, ".str");
     
     auto zero = llvm::Constant::getNullValue(llvm::IntegerType::getInt32Ty(MyContext));    
 
     std::vector<llvm::Constant *> indices;
     indices.push_back(zero); indices.push_back(zero);
-    auto var_ref = llvm::ConstantExpr::getGetElementPtr(format_string_var->getValueType(), format_string_var, indices);
+    llvm::Constant* var_ref = llvm::ConstantExpr::getGetElementPtr(llvm::ArrayType::get(llvm::IntegerType::get(MyContext, 8),
+									   printf_format.size() + 1),
+							format_string_var,
+							indices);
 
     printf_args.insert(printf_args.begin(), var_ref);
     auto call = llvm::CallInst::Create(context.printf, llvm::makeArrayRef(printf_args), "", context.currentBlock());
     //llvm::ReturnInst::Create(llvm::getGlobalContext(), block);
-    
+    std::cout << "write or writeln called" << std::endl;
     //context.popBlock();
     return call;
   }
@@ -471,7 +489,7 @@ llvm::Value* IfStm::codeGen(CodeGenContext& context){
   context.pushBlock(bfalse);
   if (false_do != nullptr){
       false_do->codeGen(context);
-      std::cout << "true block generated" << std::endl;
+      std::cout << "false block generated" << std::endl;
   }
   llvm::BranchInst::Create(bmerge,context.currentBlock());
   context.popBlock();
