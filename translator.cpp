@@ -456,7 +456,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
             for(std::vector<Stm*>::iterator it = tmp_body->stms.begin(); it != tmp_body->stms.end(); it++) {
                 body->addStm(*it);
             }
-            std::reverse(body->stms.begin(), body->stms.end());
+            //std::reverse(body->stms.begin(), body->stms.end());
 
             return (Base*)body;
         }

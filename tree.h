@@ -9,7 +9,10 @@
 
 #define CHECK_SEMANTICS
 
+
+#ifdef USE_LLVM
 #include <llvm/IR/Value.h>
+#endif
 
 #include <string>
 #include <vector>

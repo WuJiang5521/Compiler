@@ -16,6 +16,8 @@ extern "C" FILE* yyin;
 int currentSymTabSize = 0;
 sym_tab_node symtab[SYM_TAB_LEN];
 
+Base* ast_root;
+
 void yyerror(const char* s) {
 	fprintf(stderr, "Parse error: %s\n", s);
 	exit(1);
@@ -51,6 +53,7 @@ void yyerror(const char* s) {
 %nonassoc T_ELSE
 %nonassoc T_PROCEDURE
 %nonassoc T_FUNCTION
+
 
 %%
 program : program_head routine T_DOT
