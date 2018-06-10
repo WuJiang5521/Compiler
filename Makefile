@@ -14,7 +14,7 @@ LIBS = `$(LLVM_CONFIG) --libs --system-libs`
 all:
 	flex -o tokenizer.cpp ${NAME}.l
 	bison -d -o parser.cpp ${NAME}.y
-	clang++ -g ${CXXFLAGS} *.cpp $(LIBS) $(LDFLAG) -lfl -o tester
+	clang++ -g ${CXXFLAGS} *.cpp $(LIBS) $(LDFLAG) -lfl -o zebra
 
 # make debug - check the bison output report
 debug:
