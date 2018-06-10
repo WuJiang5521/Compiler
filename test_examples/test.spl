@@ -1,8 +1,8 @@
-PrOgram ojbk;
+program ojbk;
 label
     1;
 const
-    a = 'a'';
+    a = 'a';
     b = 1;
 type
     arr = array['a'..'b'] of integer;

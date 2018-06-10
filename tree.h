@@ -5,9 +5,9 @@
 #ifndef SPLCOMPILER_TREE_H
 #define SPLCOMPILER_TREE_H
 
-#define USE_LLVM
+//#define USE_LLVM
 
-//#define CHECK_SEMANTICS
+#define CHECK_SEMANTICS
 
 
 #ifdef USE_LLVM
@@ -174,11 +174,12 @@ namespace ast {
     public:
         std::string name;
         Define *define = nullptr;
-        Body *body = new Body();
+        Body *body = nullptr;
 
         explicit Program(const std::string &);
 
         void addDefine(Define *);
+        void addBody(Body *);
 
 #ifdef USE_LLVM
 
@@ -314,7 +315,7 @@ namespace ast {
         std::vector<bool> args_is_formal_parameters; //true:&, false:local
         Type *rtn_type = nullptr; //if procedure == nullptr
         Define *define = nullptr;
-        Body *body = new Body();
+        Body *body = nullptr;
 
         explicit FunctionDef(const std::string &);
 
@@ -323,6 +324,8 @@ namespace ast {
         void setReturnType(Type *);
 
         void addDefine(Define *);
+
+        void addBody(Body *);
 
 #ifdef USE_LLVM
 
@@ -421,14 +424,14 @@ namespace ast {
     class IfStm : public Stm {
     public:
         Exp *condition = nullptr;
-        Body *true_do = new Body(); // cannot be nullptr
+        Body *true_do = nullptr; // cannot be nullptr
         Body *false_do = nullptr; // can be nullptr
 
         IfStm();
 
         void setCondition(Exp *);
-
-        void addFalse();
+        void addTrue(Body *);
+        void addFalse(Body *);
 
 #ifdef USE_LLVM
 
@@ -446,11 +449,12 @@ namespace ast {
     class Situation : public Base {
     public:
         std::vector<Exp *> match_list;
-        Body *solution = new Body();
+        Body *solution = nullptr;
 
         Situation();
 
         void addMatch(Exp *);
+        void addSolution(Body *);
 
 #ifdef USE_LLVM
 
@@ -492,9 +496,11 @@ namespace ast {
         std::string iter;
         Exp *start = nullptr, *end = nullptr;
         int step; // 1 or -1
-        Body *loop = new Body();
+        Body *loop = nullptr;
 
         ForStm(const std::string &, Exp *, Exp *, int);
+
+        void addLoop(Body *);
 
 #ifdef USE_LLVM
 
@@ -512,9 +518,10 @@ namespace ast {
     class WhileStm : public Stm {
     public:
         Exp *condition = nullptr;
-        Body *loop = new Body();
+        Body *loop = nullptr;
 
         explicit WhileStm(Exp *);
+        void addLoop(Body *);
 
 #ifdef USE_LLVM
 
@@ -532,11 +539,12 @@ namespace ast {
     class RepeatStm : public Stm {
     public:
         Exp *condition = nullptr;
-        Body *loop = new Body();
+        Body *loop = nullptr;
 
         RepeatStm();
 
         void setCondition(Exp *);
+        void addLoop(Body *);
 
 #ifdef USE_LLVM
 

@@ -25,6 +25,11 @@ front:
 	bison -d -o parser.cpp ${NAME}.y
 	clang++ -g -D_GLIBCXX_DEBUG -std=c++11 parser.cpp tokenizer.cpp common.cpp cst.cpp translator.cpp tree.cpp -lfl
 
+semantics:
+	flex -o tokenizer.cpp ${NAME}.l
+	bison -d -o parser.cpp ${NAME}.y
+	clang++ -g -D_GLIBCXX_DEBUG -std=c++11 parser.cpp tokenizer.cpp common.cpp cst.cpp translator.cpp tree.cpp semantics.cpp -lfl
+
 clean:
 	@rm -f parser.output *.o parser.cpp parser.hpp tokenizer.cpp tester
 
