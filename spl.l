@@ -1,4 +1,5 @@
 %{
+//#define PRINT
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -8,11 +9,17 @@
 extern "C" int yylex();
 extern "C" void yyerror(const char* s);
 int installId(char*, unsigned);
+#ifdef PRINT
+#define TOKEN(tok) { printf("token: %s\n", tok); }
+#else
 int lookup(char*);
 extern sym_tab_node symtab[];
 extern int currentSymTabSize;
 #define TOKEN(tok)  { return(tok);}
+#endif
 %}
+
+%option yylineno
 
 delimiter       [\t\n\r ]
 digit           [0-9]
@@ -102,30 +109,67 @@ comment         (\{.*\}|\(\*.*\*\)|\/\/.*)
 "real"      TOKEN(T_REAL)
 "string"    TOKEN(T_STRING)
 
-{id}                { yylval.iVal = installId(yytext, 0); return S_ID; }
+{id}                { 
+#ifdef PRINT
+    installId(yytext, 0);
+#else
+    yylval.iVal = installId(yytext, 0); return S_ID; 
+#endif
+                    }
 {char_const}        { 
     char character[2];
     character[0] = yytext[1];
     character[1] = 0;
+#ifdef PRINT
+    installId(character, 2);
+#else
     yylval.iVal = installId(character, 2); 
+#endif
     return S_CHAR; 
                     }
 {string_const}      {
     char string[ID_MAX_LEN];
     strcpy(string, yytext+1);       // remove leading '
     string[strlen(yytext)-2] = 0;   // remove trail '
+#ifdef PRINT
+    installId(string, 4);
+#else
     yylval.iVal = installId(string, 4);
+#endif
     return S_STRING; 
                     }
-{integer}           { yylval.iVal = atoi(yytext); return S_INTEGER; }
-{real}              { yylval.iVal = installId(yytext, 1); return S_REAL; }
+{integer}           { 
+#ifdef PRINT
+    installId(yytext, 0);
+#else
+    yylval.iVal = atoi(yytext); return S_INTEGER; 
+#endif
+                    }
+
+{real}              { 
+#ifdef PRINT
+    installId(yytext, 1);
+#else
+    yylval.iVal = installId(yytext, 1); return S_REAL; 
+#endif
+                    }
 {ws}                // do nothing
 {comment}           // do nothing
 .                   printf("ERROR. Unexpected symbol found. %s %d\n", yytext, yytext[0]);
 
 %%
 
-// 
+#ifdef PRINT
+int installId(char* id, unsigned type = -1) {
+    printf("install: %s\n", id);
+}
+int yywrap() {
+    return 1;
+}
+int main() {
+    yylex();
+}
+#else
 int installId(char* id, unsigned type = -1) {
     // convert to lower case
     char lower_id[100];
@@ -160,3 +204,4 @@ int lookup(char* id) {
     }
     return -1;
 }
+#endif

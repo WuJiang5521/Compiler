@@ -6,6 +6,8 @@
  */
 #include "common.h"
 
+extern int yylineno;
+
 std::string getOpNameByID(int id) {
     switch (id) {
         case OP_ADD:
@@ -60,6 +62,6 @@ std::string getOpNameByID(int id) {
 }
 
 void yyerror(const char *info) {
-    fprintf(stderr, "%s\n", info);
+    fprintf(stderr, "line %d: %s\n", yylineno, info);
     exit(1);
 }

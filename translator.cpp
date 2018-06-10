@@ -34,10 +34,12 @@ float lookup_float(int index) {
     return atof(result);
 }
 
+/*
 void set_type(int index, int type) {
     extern sym_tab_node symtab[];
     symtab[index].type = type;
 }
+*/
 
 int lookup_type(int index) {
     extern sym_tab_node symtab[];
@@ -94,7 +96,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     ConstantExp* value = (ConstantExp*)translate(const_expr_list_ptr->second);
                     ConstDef* constDef = new ConstDef(name, value);
                     define->addConst(constDef);
-                    set_type(const_expr_list_ptr->item, value->value->base_type);
+                    //set_type(const_expr_list_ptr->item, value->value->base_type);
                     const_expr_list_ptr = const_expr_list_ptr->first;
                 }
                 std::string name = lookup_string(const_expr_list_ptr->item);
@@ -102,7 +104,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                 ConstDef* constDef = new ConstDef(name, value);
                 define->addConst(constDef);
                 std::reverse(define->const_def.begin(), define->const_def.end());
-                set_type(const_expr_list_ptr->item, value->value->base_type);
+                //set_type(const_expr_list_ptr->item, value->value->base_type);
             }
 
             // ROUTINE_HEAD->TYPE_PART
@@ -141,7 +143,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                         std::string name = lookup_string(name_list_ptr->item);
                         VarDef* varDef = new VarDef(name, type);
 
-                        set_type(name_list_ptr->item, type->base_type);
+                        //set_type(name_list_ptr->item, type->base_type);
 
                         define->addVar(varDef);
                         name_list_ptr = name_list_ptr->first;
@@ -156,7 +158,7 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
                     std::string name = lookup_string(name_list_ptr->item);
                     VarDef* varDef = new VarDef(name, type);
 
-                    set_type(name_list_ptr->item, type->base_type);
+                    //set_type(name_list_ptr->item, type->base_type);
 
                     define->addVar(varDef);
                     name_list_ptr = name_list_ptr->first;
@@ -368,6 +370,10 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case SIMPLE_TYPE_DECL_2:
         {
             Type* type = ast::findType(lookup_string(tree->item), ast_tree);
+            if (type == nullptr) {
+                printf("Type error.\n");
+                exit(1);
+            }
             return (Base*)type;
         }
 
