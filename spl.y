@@ -62,6 +62,7 @@ program : program_head routine T_DOT
             /*Pass the semantics check. We can generate code.*/
         }
         #endif
+        ast::printTree("log", ast_root);
         $$ = root;
     };
 

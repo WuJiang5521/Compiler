@@ -119,8 +119,8 @@ namespace ast {
 
     class Exp : public Base {
     public:
-        Value *return_value;
-        Type *return_type;
+        Value *return_value = nullptr;
+        Type *return_type = nullptr;
 
         explicit Exp(int type = 0);
 

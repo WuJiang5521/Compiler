@@ -5,7 +5,7 @@
 #include "tree.h"
 #include "common.h"
 #ifdef CHECK_SEMANTICS
-#define DEBUG_MODE
+//#define DEBUG_MODE
 
 using namespace ast;
 
@@ -458,8 +458,8 @@ bool ForStm::checkSemantics() {
 #endif
     start->checkSemantics();
     end->checkSemantics();
-    if ((isTypeInt(start->return_type) && isTypeInt(end->return_type)) ||
-        (isTypeChar(start->return_type) && isTypeChar(end->return_type))) {
+    if (!((isTypeInt(start->return_type) && isTypeInt(end->return_type)) ||
+        (isTypeChar(start->return_type) && isTypeChar(end->return_type)))) {
         char info[200];
         sprintf(info, "Semantics Error: The start index or the end index is illegal.");
         yyerror(this, info);
@@ -929,15 +929,17 @@ bool BinaryExp::checkSemantics() {
             case OP_INDEX: {
                 is_legal &= operand2->checkSemantics();
                 if (!is_legal) return is_legal;
-                if (isTypeArray(operand1->return_type) || isTypeString(operand1->return_type))
-                    if (isTypeInt(operand2->return_type) || isTypeChar(operand2->return_type))
+                if (isTypeArray(operand1->return_type) || isTypeString(operand1->return_type)) {
+                    if (isTypeInt(operand2->return_type) || isTypeChar(operand2->return_type)) {
                         return_type = copyType(operand1->return_type->child_type[0]);
+                    }
                     else {
                         char info[200];
                         sprintf(info, "Semantics Error: The index must be integer or char.");
                         yyerror(this, info);
                         is_legal = false;
                     }
+                }
                 else {
                     char info[200];
                     sprintf(info, "Semantics Error: The type of the first operand in the binary operator \'[]\' must be array or string.");
