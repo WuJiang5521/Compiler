@@ -877,10 +877,10 @@ Base* Translator::translate(cst_tree tree, Base* ast_tree) {
         case FACTOR_9:
         {
             std::string name = lookup_string(tree->item);
-            CallExp* callExp = new CallExp(name);
+            VariableExp* variableExp = new VariableExp(name);
             Exp* exp = (Exp*)translate(tree->first);
-            callExp->addArgs(exp);
-            return (Base*)callExp;
+            BinaryExp* binaryExp = new BinaryExp(OP_INDEX, variableExp, exp);
+            return (Base*)binaryExp;
         }
 
         case FACTOR_10:

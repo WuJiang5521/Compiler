@@ -57,9 +57,11 @@ program : program_head routine T_DOT
         cst_tree root = create_node(NOTHING, PROGRAM, $1, $2, NULL, NULL, NULL);
         ast_root = Translator::translate(root);
         ast::printTree("log", ast_root);
+        #ifdef CHECK_SEMANTICS
         if(ast_root->checkSemantics()) {
             /*Pass the semantics check. We can generate code.*/
         }
+        #endif
         $$ = root;
     };
 
