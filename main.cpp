@@ -27,10 +27,12 @@ int main(int argc, char** argv) {
 	std::cout << "after yyparse()" << std::endl;
 	//cout << ast_root << endl;
 	//ast_root->print_node("", true, true);
+	InitializeNativeTargetAsmPrinter();
+	InitializeNativeTargetAsmParser();
 	InitializeNativeTarget();
 	CodeGenContext context;
 	//createCoreFunctions(context);
 	context.generateCode(*ast_root);
-	context.runCode();
+	//context.runCode();
 	return 0;
 }
