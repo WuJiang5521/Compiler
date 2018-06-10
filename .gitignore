@@ -45,3 +45,6 @@ lex.yy.c
 *.tab.*
 *.swp
 *.json
+parser.*
+tokenizer.*
+test_examples/*
