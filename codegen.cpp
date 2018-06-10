@@ -265,6 +265,7 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
 	//don't know yet
       }
     }
+    
   }
   else{
     alloc = new llvm::AllocaInst(type->toLLVMType(context), 0, name.c_str(), context.currentBlock());
@@ -275,16 +276,8 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
 
 llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
     std::vector<llvm::Type*> arg_types;
-    int i = 0;
     for(ast::Type *it : args_type){
-      if(args_is_formal_parameters[i]){
-	arg_types.push_back(llvm::Type::getInt32PtrTy(MyContext));
-	context.currentCodeGenBlock()->is_formal_param.insert(args_name[i]);
-      }
-      else{
 	arg_types.push_back(it->toLLVMType(context)); 
-      }
-      i++;
     }
     auto f_type = llvm::FunctionType::get((rtn_type == nullptr) ? llvm::Type::getVoidTy(MyContext) : rtn_type->toLLVMType(context), llvm::makeArrayRef(arg_types), false);
     auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, name.c_str(), context.module);
@@ -299,23 +292,12 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
     llvm::Value* arg_value;
     auto args_values = function->arg_begin();
     for(int i = 0; i < arg_types.size(); i++){
-      if(args_is_formal_parameters[i]){
-	std::cout << "formal variable define: " << args_name[i] << std::endl;
-        llvm::Value* alloc;
-	std::string _name = args_name[i];
-        alloc = new llvm::AllocaInst(llvm::Type::getInt32PtrTy(MyContext), 0, args_name[i].c_str(), context.currentBlock());
-	arg_value = args_values++;
-        arg_value->setName(args_name[i].c_str());
-	auto stor_inst = new llvm::StoreInst(arg_value, alloc, false, block);
-      }
-      else{
 	std::cout << "variable define: " << args_name[i] << std::endl;
         llvm::Value* alloc;
         alloc = new llvm::AllocaInst(args_type[i]->toLLVMType(context), 0, args_name[i].c_str(), context.currentBlock());
-        arg_value = args_values++;
+	arg_value = args_values++;
         arg_value->setName(args_name[i].c_str());
         auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
-      }
     }
     
     if(rtn_type != nullptr){
@@ -421,13 +403,14 @@ llvm::Value* AssignStm::codeGen(CodeGenContext& context){
       std::cout << "leftVale is a array type but the rightValue is not" << std::endl;
     }
     else{
-      if(context.currentCodeGenBlock()->is_formal_param.find(_op1->name) != (context.currentCodeGenBlock()->is_formal_param.end())){
-	llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(_op1->name), "", false, context.currentBlock());
-	return new llvm::StoreInst(right_value->codeGen(context), _ld1, false, context.currentBlock());
-      }
-      else{
+//       if(context.currentCodeGenBlock()->is_formal_param.find(_op1->name) != (context.currentCodeGenBlock()->is_formal_param.end())){
+// 	llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(_op1->name), "", false, context.currentBlock());
+// 	return new llvm::StoreInst(right_value->codeGen(context), _ld1, false, context.currentBlock());
+//       }
+//       else{
+// 	llvm::Value* right = right_value->codeGen(context);
 	return new llvm::StoreInst(right_value->codeGen(context), context.getValue(_op1->name), false, context.currentBlock());
-      }
+//       }
     }
   }
 }
@@ -447,7 +430,7 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
             std::cout << "SysFuncCall write variable previous name" << arg_val->getName().str() << std::endl;
             printf_args.push_back(arg_val);
         } else if (arg_val->getType()->isFloatTy()) {
-            printf_format += "%lf";
+            printf_format += "%f";
             printf_args.push_back(arg_val);
         } else if (arg_val->getType() == llvm::Type::getInt8PtrTy(MyContext)) {
             std::cout << "string print is not supported" << std::endl;
@@ -477,6 +460,8 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
     //context.popBlock();
     return call;
   }
+  
+  
   auto function = context.module->getFunction(name.c_str());
   if (function == nullptr){
      std::cout << "calling function named " << name << " but not defined" << std::endl;
@@ -867,7 +852,7 @@ llvm::Value* BinaryExp::codeGen(CodeGenContext& context){
   llvm::Value* op1_val = operand1->codeGen(context);
   llvm::Value* op2_val = operand2->codeGen(context);
   
-  if(op1_val->getType()->isDoubleTy() || op2_val->getType()->isDoubleTy()){
+  if(op1_val->getType()->isFloatTy() || op2_val->getType()->isFloatTy()){
     switch(op_code){
       //arithmetic
       case OP_ADD: return llvm::BinaryOperator::Create(llvm::Instruction::FAdd, op1_val, op2_val, "", context.currentBlock()); break;
@@ -916,14 +901,67 @@ llvm::Value* BinaryExp::codeGen(CodeGenContext& context){
 }
 
 llvm::Value* CallExp::codeGen(CodeGenContext& context){
-  llvm::Function* function = context.module->getFunction(name.c_str());
+  std::cout << "creating calling " << std::endl;
+  auto function = context.module->getFunction(name.c_str());
   if (function == nullptr){
      std::cout << "calling function named " << name << " but not defined" << std::endl;
      exit(0);
   }
+  auto func_args_values = function->arg_begin();
+  llvm::Value* func_arg_value;
   std::vector<llvm::Value*> _args;
   for(auto arg :args) {
+    func_arg_value = func_args_values++;
+    if(func_arg_value->getType()->isPointerTy()){
+      if(arg->node_type == N_VARIABLE_EXP){
+	VariableExp* _node = static_cast<VariableExp*>(arg);
+	_args.push_back(context.getValue(_node->name));
+      }
+      else if(arg->node_type == N_BINARY_EXP){
+	BinaryExp* _node = static_cast<BinaryExp*>(arg);
+	if(_node->op_code == OP_DOT){
+	  if(_node->operand2->node_type == N_VARIABLE_EXP){
+	    VariableExp* _op2 = static_cast<VariableExp*>(_node->operand2);
+	    //get index in the record
+	    int index = getRecordIndex(_node->operand1->return_type, _op2->name);
+	    llvm::Value* member_index = llvm::ConstantInt::get(MyContext, llvm::APInt(32, index, true));//create member_index
+	    std::vector<llvm::Value*> indices(2);
+	    indices[0] = llvm::ConstantInt::get(MyContext, llvm::APInt(32, 0, true));
+	    indices[1] = member_index;
+	    llvm::Value* member_ptr;
+	    member_ptr = llvm::GetElementPtrInst::Create(_node->operand1->return_type->toLLVMType(context), context.getValue(_op2->name),
+						   indices, "", context.currentBlock());
+	    _args.push_back(member_ptr);
+	  }
+	  else{
+	    std::cout << "operand2 of Dot operation is not a VariableExp Type" << std::endl;
+	  }
+	}
+	else if(_node->op_code == OP_INDEX){
+	  if(_node->operand1->node_type == N_VARIABLE_EXP){
+	    VariableExp* _op1 = static_cast<VariableExp*>(_node->operand1);
+	    auto arr = context.getValue(_op1->name);
+	    std::vector<llvm::Value*> indices(2);
+	    indices[0] = llvm::ConstantInt::get(MyContext, llvm::APInt(32, 0, true));
+	    indices[1] = _node->operand2->codeGen(context);
+	    llvm::Value* member_ptr;
+	    member_ptr = llvm::GetElementPtrInst::CreateInBounds(arr, llvm::ArrayRef<llvm::Value*>(indices),
+							 "tempname", context.currentBlock());
+	    _args.push_back(member_ptr);
+	 }
+	  else{
+	    std::cout << "Array's Ref is not an array type variable" << std::endl;
+	    exit(0);
+	  }
+	}
+      }
+      else{
+	std::cout << "wrong left value type" << std::endl;
+      }
+    }
+    else{
       _args.push_back(arg->codeGen(context));
+    }
   }
   auto call = llvm::CallInst::Create(function, llvm::makeArrayRef(_args), "", context.currentBlock());
   std::cout << "Created method call: " << name << std::endl;
@@ -936,13 +974,14 @@ llvm::Value* ConstantExp::codeGen(CodeGenContext& context){
 
 llvm::Value* VariableExp::codeGen(CodeGenContext& context){
   std::cout << "loading variable: " << name << std::endl;
-  if(context.currentCodeGenBlock()->is_formal_param.find(name) != (context.currentCodeGenBlock()->is_formal_param.end())){
-    llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
-    return new llvm::LoadInst(_ld1, "", false, context.currentBlock());
-  }
-  else{
+//   if(context.currentCodeGenBlock()->is_formal_param.find(name) != (context.currentCodeGenBlock()->is_formal_param.end())){
+//     std::cout << "found formal parameter " << name << std::endl;
+//     llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
+//     return new llvm::LoadInst(_ld1, "", false, context.currentBlock());
+//   }
+//   else{
     return new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
-  }
+//   }
 }
 
 llvm::Value* ast::Type::codeGen(CodeGenContext& context){
