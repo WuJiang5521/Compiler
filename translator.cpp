@@ -19,7 +19,6 @@
 #include "tree.h"
 #include "common.h"
 #include "symtab.h"
-#include "id2type.h"
 
 using namespace ast;
 
