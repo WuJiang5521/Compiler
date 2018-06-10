@@ -5,7 +5,7 @@
 #ifndef SPLCOMPILER_TREE_H
 #define SPLCOMPILER_TREE_H
 
-//#define USE_LLVM
+#define USE_LLVM
 
 #define CHECK_SEMANTICS
 

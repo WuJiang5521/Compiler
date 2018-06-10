@@ -112,12 +112,19 @@ int getRecordIndex(ast::Type* return_type, std::string name){
 }
 
 llvm::Value* getArrRef(BinaryExp* exp, CodeGenContext& context){
-  auto arr = context.getValue(exp->operand1->return_type->name);
-  std::vector<llvm::Value*> indices(2);
-  indices[0] = llvm::ConstantInt::get(MyContext, llvm::APInt(32, 0, true));
-  indices[1] = exp->operand2->codeGen(context);
-  return llvm::GetElementPtrInst::CreateInBounds(arr, llvm::ArrayRef<llvm::Value*>(indices),
+  if(exp->operand1->node_type == N_VARIABLE_EXP){
+    VariableExp* _left = static_cast<VariableExp*>(exp->operand1);
+    auto arr = context.getValue(_left->name);
+    std::vector<llvm::Value*> indices(2);
+    indices[0] = llvm::ConstantInt::get(MyContext, llvm::APInt(32, 0, true));
+    indices[1] = exp->operand2->codeGen(context);
+    return llvm::GetElementPtrInst::CreateInBounds(arr, llvm::ArrayRef<llvm::Value*>(indices),
 							 "tempname", context.currentBlock());
+  }
+  else{
+    std::cout << "Array Reference Error" << std::endl;
+    exit(0);
+  }
 }
 
 llvm::Value* Stm::codeGen(CodeGenContext& context){
@@ -418,7 +425,7 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
             std::cout << "SysFuncCall write variable previous name" << arg_val->getName().str() << std::endl;
             printf_args.push_back(arg_val);
         } else if (arg_val->getType()->isFloatTy()) {
-            printf_format += "%lf";
+            printf_format += "%f";
             printf_args.push_back(arg_val);
         } else if (arg_val->getType() == llvm::Type::getInt8PtrTy(MyContext)) {
             std::cout << "string print is not supported" << std::endl;

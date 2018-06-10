@@ -746,12 +746,3 @@ int doyyparse() {
     return 0;
 }
 
-int main() {
-    yyin = stdin;
-    do {
-        yyparse();
-    } while (!feof(yyin));
-
-    return 0;
-}
-

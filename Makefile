@@ -6,6 +6,7 @@ NO_WARNING =  -Wno-return-type \
 	-Wno-c++11-compat-deprecated-writable-strings \
 	-Wno-deprecated-register \
 	-Wno-switch \
+	-Wno-inconsistent-missing-override \
 
 CXXFLAGS = `$(LLVM_CONFIG) --cppflags` -std=c++11 $(NO_WARNING)
 LDFLAGS = `$(LLVM_CONFIG) --ldflags`
