@@ -4,6 +4,8 @@
 #include <iostream>
 
 #include <stack>
+#include <set>
+
 #include <typeinfo>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
@@ -15,6 +17,7 @@
 #include <llvm/IR/CallingConv.h>
 #include <llvm/IR/IRPrintingPasses.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/ValueSymbolTable.h>
 #include <llvm/Bitcode/BitstreamReader.h>
 #include <llvm/Bitcode/BitstreamWriter.h>
@@ -44,6 +47,7 @@ public:
     std::map<std::string,  llvm::Value*> locals;
     std::map<std::string, ast::Exp*> const_locals;
     std::map<std::string, ast::Type*> typedefs;
+    std::set<std::string> is_formal_param;
 };
 
 class CodeGenContext {
@@ -69,12 +73,14 @@ public:
     std::map<std::string,  llvm::Value*>& locals() { return blocks.top()->locals; }
     BasicBlock* currentBlock() { return blocks.top()->block; }
     CodeGenBlock* currentCodeGenBlock() {return blocks.top(); } 
-    void pushBlock(BasicBlock *block) { 
+    void pushBlock(BasicBlock *block) {
+      std::cout << "pushing----------" << std::endl;
       blocks.push(new CodeGenBlock());
       blocks.top()->returnValue = NULL;
       blocks.top()->block = block; 
     }
     void popBlock() {
+      std::cout << "poping----------" << std::endl;
       CodeGenBlock *top = blocks.top();
       blocks.pop(); 
       delete top;
@@ -104,7 +110,6 @@ public:
         std::cout << "Found Local Variable:" << name << std::endl;
         return nowFunc->getValueSymbolTable()->lookup(name);
     }
-    
 };
 
 
