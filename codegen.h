@@ -48,6 +48,7 @@ public:
     std::map<std::string, ast::Exp*> const_locals;
     std::map<std::string, ast::Type*> typedefs;
     std::set<std::string> is_formal_param;
+    
 };
 
 class CodeGenContext {
@@ -65,6 +66,7 @@ public:
     
     llvm::Function* printf;
     
+    std::map<std::string, ast::FunctionDef*> defined_functions;
     
     CodeGenContext() { module = new Module("main", MyContext); }
     

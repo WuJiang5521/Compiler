@@ -275,9 +275,18 @@ llvm::Value* VarDef::codeGen(CodeGenContext& context){
 }
 
 llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
+    context.defined_functions[name] = this;
+  
     std::vector<llvm::Type*> arg_types;
+    int i = 0;
     for(ast::Type *it : args_type){
-	arg_types.push_back(it->toLLVMType(context)); 
+      if(args_is_formal_parameters[i]){
+	arg_types.push_back(llvm::Type::getInt32PtrTy(MyContext));
+      }
+      else{
+	arg_types.push_back(it->toLLVMType(context));
+      }
+      i++;
     }
     auto f_type = llvm::FunctionType::get((rtn_type == nullptr) ? llvm::Type::getVoidTy(MyContext) : rtn_type->toLLVMType(context), llvm::makeArrayRef(arg_types), false);
     auto function = llvm::Function::Create(f_type, llvm::GlobalValue::InternalLinkage, name.c_str(), context.module);
@@ -292,12 +301,22 @@ llvm::Value* FunctionDef::codeGen(CodeGenContext& context){
     llvm::Value* arg_value;
     auto args_values = function->arg_begin();
     for(int i = 0; i < arg_types.size(); i++){
+      if(args_is_formal_parameters[i]){
+	std::cout << "formal variable define: " << args_name[i] << std::endl;
+        llvm::Value* alloc;
+        alloc = new llvm::AllocaInst(llvm::Type::getInt32PtrTy(MyContext), 0, args_name[i].c_str(), context.currentBlock());
+	arg_value = args_values++;
+        arg_value->setName(args_name[i].c_str());
+        auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
+      }
+      else{
 	std::cout << "variable define: " << args_name[i] << std::endl;
         llvm::Value* alloc;
         alloc = new llvm::AllocaInst(args_type[i]->toLLVMType(context), 0, args_name[i].c_str(), context.currentBlock());
 	arg_value = args_values++;
         arg_value->setName(args_name[i].c_str());
         auto inst = new llvm::StoreInst(arg_value, alloc, false, block);
+      }
     }
     
     if(rtn_type != nullptr){
@@ -403,14 +422,13 @@ llvm::Value* AssignStm::codeGen(CodeGenContext& context){
       std::cout << "leftVale is a array type but the rightValue is not" << std::endl;
     }
     else{
-//       if(context.currentCodeGenBlock()->is_formal_param.find(_op1->name) != (context.currentCodeGenBlock()->is_formal_param.end())){
-// 	llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(_op1->name), "", false, context.currentBlock());
-// 	return new llvm::StoreInst(right_value->codeGen(context), _ld1, false, context.currentBlock());
-//       }
-//       else{
-// 	llvm::Value* right = right_value->codeGen(context);
-	return new llvm::StoreInst(right_value->codeGen(context), context.getValue(_op1->name), false, context.currentBlock());
-//       }
+      llvm::Value* _ld1 = context.getValue(_op1->name);
+      llvm::Value* _ld2 = new llvm::LoadInst(context.getValue(_op1->name), "", false, context.currentBlock());
+      while(_ld2->getType()->isPointerTy()){
+	_ld1 = _ld2;
+	_ld2 = new llvm::LoadInst(_ld1, "", false, context.currentBlock());
+      }
+      return new llvm::StoreInst(right_value->codeGen(context), _ld1, false, context.currentBlock());
     }
   }
 }
@@ -470,12 +488,17 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
   auto func_args_values = function->arg_begin();
   llvm::Value* func_arg_value;
   std::vector<llvm::Value*> _args;
+  int i = 0;
   for(auto arg :args) {
     func_arg_value = func_args_values++;
     if(func_arg_value->getType()->isPointerTy()){
       if(arg->node_type == N_VARIABLE_EXP){
 	VariableExp* _node = static_cast<VariableExp*>(arg);
-	_args.push_back(context.getValue(_node->name));
+	llvm::Value* ptr = context.getValue(_node->name);
+	while(ptr->getType() != llvm::Type::getInt32PtrTy(MyContext)){
+	  ptr = new llvm::LoadInst(ptr, "", false, context.currentBlock());
+	}
+	_args.push_back(ptr);
       }
       else if(arg->node_type == N_BINARY_EXP){
 	BinaryExp* _node = static_cast<BinaryExp*>(arg);
@@ -522,6 +545,7 @@ llvm::Value* CallStm::codeGen(CodeGenContext& context){
     else{
       _args.push_back(arg->codeGen(context));
     }
+    i++;
   }
   auto call = llvm::CallInst::Create(function, llvm::makeArrayRef(_args), "", context.currentBlock());
   std::cout << "Created method call: " << name << std::endl;
@@ -915,7 +939,11 @@ llvm::Value* CallExp::codeGen(CodeGenContext& context){
     if(func_arg_value->getType()->isPointerTy()){
       if(arg->node_type == N_VARIABLE_EXP){
 	VariableExp* _node = static_cast<VariableExp*>(arg);
-	_args.push_back(context.getValue(_node->name));
+	llvm::Value* ptr = context.getValue(_node->name);
+	while(ptr->getType() != llvm::Type::getInt32PtrTy(MyContext)){
+	  ptr = new llvm::LoadInst(ptr, "", false, context.currentBlock());
+	}
+	_args.push_back(ptr);
       }
       else if(arg->node_type == N_BINARY_EXP){
 	BinaryExp* _node = static_cast<BinaryExp*>(arg);
@@ -972,16 +1000,25 @@ llvm::Value* ConstantExp::codeGen(CodeGenContext& context){
   return value->codeGen(context);
 }
 
+// bool find_formal_parameter(CodeGenContext& context, std::string name){
+//   CodeGenBlock* cur_block = context.currentCodeGenBlock();
+//   while(cur_block){
+//     if(cur_block->is_formal_param.find(name) != (cur_block->is_formal_param.end())){
+//       return true;
+//     }
+//     cur_block = cur_block->parent;
+//   }
+//   return false;
+// }
+
 llvm::Value* VariableExp::codeGen(CodeGenContext& context){
   std::cout << "loading variable: " << name << std::endl;
-//   if(context.currentCodeGenBlock()->is_formal_param.find(name) != (context.currentCodeGenBlock()->is_formal_param.end())){
-//     std::cout << "found formal parameter " << name << std::endl;
-//     llvm::Value* _ld1 = new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
-//     return new llvm::LoadInst(_ld1, "", false, context.currentBlock());
-//   }
-//   else{
-    return new llvm::LoadInst(context.getValue(name), "", false, context.currentBlock());
-//   }
+  llvm::Value* ptr = context.getValue(name);
+  ptr = new llvm::LoadInst(ptr, "", false, context.currentBlock());
+  if(ptr->getType()->isPointerTy()){
+    ptr = new llvm::LoadInst(ptr, "", false, context.currentBlock());
+  }
+  return ptr;
 }
 
 llvm::Value* ast::Type::codeGen(CodeGenContext& context){
